@@ -1,8 +1,21 @@
+﻿import clsx from 'clsx';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import {
-  LayoutGrid, Award, FileText, CheckSquare, XCircle, Download,
-  BarChart3, RefreshCw, Key, LogOut, ChevronRight, Shield
+  LayoutGrid,
+  Award,
+  FileText,
+  CheckSquare,
+  XCircle,
+  Download,
+  BarChart3,
+  RefreshCw,
+  Key,
+  LogOut,
+  ChevronRight,
+  Shield,
+  User,
+  UserCog,
 } from 'lucide-react';
 
 const userLinks = [
@@ -10,19 +23,19 @@ const userLinks = [
   { to: '/certificates', label: 'Mes certificats', icon: Award },
   { to: '/generate-csr', label: 'Nouvelle demande', icon: FileText },
   { to: '/requests', label: 'Suivi de demande', icon: CheckSquare },
-  { to: '/revoke-certificate', label: 'Révoquer certificat', icon: XCircle },
-  { to: '/download-crl', label: 'Télécharger CRL', icon: Download },
+  { to: '/revoke-certificate', label: 'Revoquer certificat', icon: XCircle },
+  { to: '/download-crl', label: 'Telecharger CRL', icon: Download },
 ];
 
 const adminLinks = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { to: '/admin/stats', label: 'Statistiques', icon: BarChart3 },
-  { to: '/admin/requests', label: 'Gérer demandes', icon: CheckSquare },
-  { to: '/admin/generate-ca', label: 'Générer AC', icon: Key },
+  { to: '/admin/requests', label: 'Gerer demandes', icon: CheckSquare },
+  { to: '/admin/generate-ca', label: 'Generer AC', icon: Key },
   { to: '/admin/sign-csr', label: 'Signer CSR', icon: Award },
   { to: '/admin/generate-crl', label: 'CRL/Rotation', icon: RefreshCw },
-  { to: '/admin/revoke-certificate', label: 'Révoquer cert', icon: XCircle },
-  { to: '/admin/download-crl', label: 'Télécharger CRL', icon: Download },
+  { to: '/admin/revoke-certificate', label: 'Revoquer cert', icon: XCircle },
+  { to: '/admin/download-crl', label: 'Telecharger CRL', icon: Download },
 ];
 
 export default function Sidebar() {
@@ -39,33 +52,34 @@ export default function Sidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <aside className="w-64 bg-white border-r border-neutral-200 min-h-screen flex flex-col p-6 shadow-sm">
-      {/* Logo */}
-      <div className="flex items-center space-x-3 mb-8">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700">
+    <aside className="flex min-h-screen w-64 flex-col border-r border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="mb-8 flex items-center space-x-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700">
           <Shield className="h-6 w-6 text-white" />
         </div>
         <div>
-          <div className="text-lg font-bold text-neutral-900">PKI</div>
-          <div className="text-xs text-neutral-600">Souverain</div>
+          <div className="text-lg font-bold text-neutral-900 dark:text-neutral-100">PKI</div>
+          <div className="text-xs text-neutral-600 dark:text-neutral-400">Souverain</div>
         </div>
       </div>
 
-      {/* Role Badge */}
       {user?.role === 'ADMIN' ? (
-        <div className="mb-6 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-center">
-          <div className="text-xs font-bold text-red-700">👨‍💼 ADMINISTRATEUR</div>
-          <div className="text-xs text-red-600 mt-0.5">{user?.email}</div>
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center dark:border-red-900/60 dark:bg-red-950/40">
+          <div className="flex items-center justify-center gap-2 text-xs font-bold text-red-700 dark:text-red-300">
+            <UserCog size={14} /> ADMINISTRATEUR
+          </div>
+          <div className="mt-0.5 text-xs text-red-600 dark:text-red-300/80">{user?.email}</div>
         </div>
       ) : (
-        <div className="mb-6 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-center">
-          <div className="text-xs font-bold text-blue-700">👤 UTILISATEUR</div>
-          <div className="text-xs text-blue-600 mt-0.5">{user?.email}</div>
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-center dark:border-blue-900/60 dark:bg-blue-950/40">
+          <div className="flex items-center justify-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300">
+            <User size={14} /> UTILISATEUR
+          </div>
+          <div className="mt-0.5 text-xs text-blue-600 dark:text-blue-300/80">{user?.email}</div>
         </div>
       )}
 
-      {/* Navigation Links */}
-      <nav className="flex-1 space-y-2 mb-8">
+      <nav className="mb-8 flex-1 space-y-2">
         {links.map((link) => {
           const Icon = link.icon;
           const active = isActive(link.to);
@@ -73,13 +87,12 @@ export default function Sidebar() {
             <Link
               key={link.to}
               to={link.to}
-              className={`
-                flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200
-                ${active
-                  ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-sm border border-indigo-200'
-                  : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'
-                }
-              `}
+              className={clsx(
+                'flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200',
+                active
+                  ? 'border border-indigo-200 bg-indigo-50 font-semibold text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200'
+                  : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
+              )}
             >
               <Icon size={18} className="flex-shrink-0" />
               <span className="text-sm font-medium">{link.label}</span>
@@ -89,16 +102,16 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Separator */}
-      <div className="border-t border-neutral-200 mb-6" />
+      <div className="mb-6 border-t border-neutral-200 dark:border-neutral-800" />
 
-      {/* Logout Button */}
       <button
         onClick={handleLogout}
-        className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-medium transition-all duration-200 border border-red-200 hover:border-red-300"
+        className="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 transition-all duration-200 hover:border-red-300 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/50"
       >
-        <LogOut size={18} className="flex-shrink-0" />
-        <span className="text-sm">Déconnexion</span>
+        <span className="flex items-center space-x-3 font-medium">
+          <LogOut size={18} className="flex-shrink-0" />
+          <span className="text-sm">Deconnexion</span>
+        </span>
       </button>
     </aside>
   );

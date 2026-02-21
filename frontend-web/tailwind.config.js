@@ -1,5 +1,6 @@
-/** @type {import('tailwindcss').Config} */
+﻿/** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Couleurs principales (Bleu foncé)
+        // Couleurs principales (Bleu foncÃ©)
         primary: {
           50: '#EFF6FF',
           100: '#DBEAFE',
@@ -46,7 +47,7 @@ export default {
           800: '#1F2937',
           900: '#111827',
         },
-        // Sémantiques
+        // SÃ©mantiques
         success: {
           50: '#ECFDF5',
           100: '#D1FAE5',

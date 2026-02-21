@@ -1,8 +1,8 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Variables CSS personnalisées */
+/* Variables CSS personnalisÃ©es */
 :root {
   /* Couleurs primaires */
   --color-primary-50: #eef2ff;
@@ -16,7 +16,7 @@
   --color-primary-800: #3730a3;
   --color-primary-900: #312e81;
 
-  /* Couleurs de succès */
+  /* Couleurs de succÃ¨s */
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
   --color-success-200: #bbf7d0;
@@ -86,7 +86,7 @@
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Réinitialisation globale */
+/* RÃ©initialisation globale */
 * {
   margin: 0;
   padding: 0;
@@ -167,7 +167,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Forms - Inputs génériques */
+/* Forms - Inputs gÃ©nÃ©riques */
 input, textarea, select {
   font-family: inherit;
   font-size: 1rem;
@@ -177,7 +177,7 @@ input:focus, textarea:focus, select:focus {
   outline: none;
 }
 
-/* Scrollbar personnalisée */
+/* Scrollbar personnalisÃ©e */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -202,7 +202,7 @@ input:focus, textarea:focus, select:focus {
   color: white;
 }
 
-/* Animations personnalisées */
+/* Animations personnalisÃ©es */
 @keyframes blob {
   0%, 100% {
     transform: translate(0, 0) scale(1);
@@ -360,4 +360,67 @@ input:focus, textarea:focus, select:focus {
   .badge-warning {
     @apply badge bg-yellow-100 text-yellow-700;
   }
+}
+/* Theme tokens */
+:root {
+  --app-bg: #f8fafc;
+  --app-surface: #ffffff;
+  --app-surface-soft: #f1f5f9;
+  --app-text: #0f172a;
+  --app-text-muted: #475569;
+  --app-border: #e2e8f0;
+}
+
+.dark {
+  --app-bg: #020617;
+  --app-surface: #0f172a;
+  --app-surface-soft: #1e293b;
+  --app-text: #e2e8f0;
+  --app-text-muted: #94a3b8;
+  --app-border: #334155;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+}
+
+/* Fallbacks for legacy page classes */
+.dark .bg-white { background-color: #0f172a !important; }
+.dark .bg-neutral-50 { background-color: #020617 !important; }
+.dark .bg-neutral-100 { background-color: #111827 !important; }
+.dark .bg-blue-50 { background-color: #0b1a33 !important; }
+.dark .bg-indigo-50 { background-color: #1e1b4b !important; }
+.dark .bg-green-50 { background-color: #052e16 !important; }
+.dark .bg-red-50 { background-color: #450a0a !important; }
+.dark .bg-yellow-50 { background-color: #422006 !important; }
+.dark .bg-orange-50 { background-color: #431407 !important; }
+.dark .bg-purple-50 { background-color: #2e1065 !important; }
+.dark .text-neutral-900,
+.dark .text-neutral-800,
+.dark .text-neutral-700,
+.dark .text-neutral-600,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-black { color: #e2e8f0 !important; }
+.dark .text-neutral-500,
+.dark .text-gray-500,
+.dark .text-slate-500,
+.dark .text-slate-600,
+.dark .text-gray-600 { color: #94a3b8 !important; }
+.dark .border,
+.dark .border-neutral-200,
+.dark .border-neutral-300,
+.dark .border-slate-200,
+.dark .border-gray-200,
+.dark .divide-neutral-200,
+.dark .divide-slate-200 { border-color: #334155 !important; }
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl {
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.45) !important;
 }
