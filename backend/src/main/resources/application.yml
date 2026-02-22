@@ -7,7 +7,12 @@ spring:
   application:
     name: pki-souverain-backend
 
-  # Base de données PostgreSQL
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 25MB
+
+  # Base de donnÃ©es PostgreSQL
   datasource:
     url: jdbc:postgresql://localhost:5432/pki_db
     username: pki_user
@@ -71,9 +76,9 @@ pki:
     expiration: 900000           # 15 minutes (en ms)
     refresh-expiration: 604800000 # 7 jours (en ms)
   
-  # Configuration AC par défaut
+  # Configuration AC par dÃ©faut
   ca-defaults:
-    name: "Autorité de Certification Souveraine"
+    name: "AutoritÃ© de Certification Souveraine"
     validity-years: 10
     key-size: 4096
     algorithm: RSA
