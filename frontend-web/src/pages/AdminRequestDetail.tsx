@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { adminService } from '../services/api';
-import Modal from '../components/Modal';
+import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
+import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
+import { adminService } from '../services/api';
 
 export default function AdminRequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +19,7 @@ export default function AdminRequestDetail() {
   const [pemText, setPemText] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   const load = async () => {
     if (!id) return;
@@ -33,19 +34,15 @@ export default function AdminRequestDetail() {
     }
   };
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    load();
+  }, [id]);
 
   const handleDownload = (filename: string) => {
     if (!id) return;
     const url = adminService.downloadRequestDocument(id, filename);
     window.open(url, '_blank');
   };
-
-  const handleApprove = () => {
-    setShowApproveModal(true);
-  };
-
-  const { addToast } = useToast();
 
   const confirmApprove = async () => {
     if (!id) return;
@@ -56,17 +53,13 @@ export default function AdminRequestDetail() {
       setPemText(resp?.certificate || null);
       setShowApproveModal(false);
       if (resp?.certificate) setShowPemModal(true);
-      addToast({ type: 'success', message: 'Demande approuvée.' });
+      addToast({ type: 'success', message: 'Demande approuvee.' });
     } catch (e: any) {
-      setErrorMsg(e?.message || 'Impossible d\'approuver');
-      addToast({ type: 'error', message: e?.message || 'Impossible d\'approuver' });
+      setErrorMsg(e?.message || "Impossible d'approuver");
+      addToast({ type: 'error', message: e?.message || "Impossible d'approuver" });
     } finally {
       setBusy(false);
     }
-  };
-
-  const handleReject = () => {
-    setShowRejectModal(true);
   };
 
   const confirmReject = async () => {
@@ -76,7 +69,7 @@ export default function AdminRequestDetail() {
     try {
       await adminService.rejectRequest(id, rejectReason);
       setShowRejectModal(false);
-      addToast({ type: 'success', message: 'Demande rejetée.' });
+      addToast({ type: 'success', message: 'Demande rejetee.' });
       navigate('/admin/requests');
     } catch (e: any) {
       setErrorMsg(e?.message || 'Impossible de rejeter');
@@ -102,104 +95,147 @@ export default function AdminRequestDetail() {
     URL.revokeObjectURL(url);
   };
 
-  if (loading) return <div>Chargement...</div>;
-  if (error) return <div className="text-red-600">{error}</div>;
-  if (!request) return <div>Aucune demande trouvée</div>;
+  if (loading) return <div className="dark:text-neutral-300">Chargement...</div>;
+  if (error) return <div className="text-red-600 dark:text-red-300">{error}</div>;
+  if (!request) return <div className="dark:text-neutral-300">Aucune demande trouvee</div>;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-h4 font-bold">Demande {request.id}</h1>
-        <button className="px-3 py-2 bg-neutral-100 rounded" onClick={() => navigate('/admin/requests')}>Retour</button>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-h4 font-bold dark:text-neutral-100">Demande {request.id}</h1>
+        <button className="rounded bg-neutral-100 px-3 py-2 dark:bg-neutral-800 dark:text-neutral-200" onClick={() => navigate('/admin/requests')}>
+          Retour
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="bg-white p-4 border rounded">
-          <h2 className="font-semibold mb-2">Informations utilisateur</h2>
-          <div><strong>Utilisateur:</strong> {request.userFullName || request.userEmail || request.userId}</div>
-          <div><strong>Email:</strong> {request.userEmail}</div>
-          <div><strong>Soumis:</strong> {request.submittedAt}</div>
-          <div><strong>Statut:</strong> {request.status}</div>
+      <div className="mb-6 grid grid-cols-2 gap-6">
+        <div className="rounded border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <h2 className="mb-2 font-semibold dark:text-neutral-100">Informations utilisateur</h2>
+          <div className="dark:text-neutral-300"><strong>Utilisateur:</strong> {request.userFullName || request.userEmail || request.userId}</div>
+          <div className="dark:text-neutral-300"><strong>Email:</strong> {request.userEmail}</div>
+          <div className="dark:text-neutral-300"><strong>Soumis:</strong> {request.submittedAt}</div>
+          <div className="dark:text-neutral-300"><strong>Statut:</strong> {request.status}</div>
         </div>
-        <div className="bg-white p-4 border rounded">
-          <h2 className="font-semibold mb-2">Sujet / CSR</h2>
-          <div><strong>CN:</strong> {request.commonName}</div>
-          <div><strong>O:</strong> {request.organization}</div>
-          <div className="mt-3"><strong>CSR:</strong></div>
-          <pre className="mt-2 p-2 bg-neutral-50 rounded text-xs overflow-auto">{request.csrContent || 'Aucun CSR'}</pre>
+        <div className="rounded border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <h2 className="mb-2 font-semibold dark:text-neutral-100">Sujet / CSR</h2>
+          <div className="dark:text-neutral-300"><strong>CN:</strong> {request.commonName}</div>
+          <div className="dark:text-neutral-300"><strong>O:</strong> {request.organization}</div>
+          <div className="mt-3 dark:text-neutral-300"><strong>CSR:</strong></div>
+          <pre className="mt-2 max-h-64 overflow-auto rounded bg-neutral-50 p-2 text-xs dark:bg-neutral-800 dark:text-neutral-300">{request.csrContent || 'Aucun CSR'}</pre>
         </div>
       </div>
 
-      <div className="bg-white p-4 border rounded mb-6">
-        <h2 className="font-semibold mb-2">Pièces jointes</h2>
+      <div className="mb-6 rounded border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <h2 className="mb-2 font-semibold dark:text-neutral-100">Pieces jointes</h2>
         {request.documents && request.documents.length > 0 ? (
           <ul className="list-disc pl-5">
             {request.documents.map((d: string) => (
               <li key={d} className="flex items-center gap-3">
-                <span className="truncate">{d}</span>
-                <button className="ml-2 text-sm px-2 py-1 bg-primary-100 text-primary-800 rounded" onClick={() => handleDownload(d)}>Télécharger</button>
+                <span className="truncate dark:text-neutral-300">{d}</span>
+                <button
+                  className="ml-2 rounded bg-primary-100 px-2 py-1 text-sm text-primary-800 dark:bg-primary-950/40 dark:text-primary-300"
+                  onClick={() => handleDownload(d)}
+                >
+                  Telecharger
+                </button>
               </li>
             ))}
           </ul>
         ) : (
-          <div>Aucune pièce jointe</div>
+          <div className="dark:text-neutral-300">Aucune piece jointe</div>
         )}
       </div>
 
-      <div className="bg-white p-4 border rounded mb-6">
-        <h2 className="font-semibold mb-2">Actions administrateur</h2>
-        <div className="flex gap-4 items-center">
+      <div className="mb-6 rounded border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <h2 className="mb-2 font-semibold dark:text-neutral-100">Actions administrateur</h2>
+        <div className="flex items-center gap-4">
           <div>
-            <label className="block text-sm">Validité (jours)</label>
-            <input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} className="px-3 py-2 border rounded w-40" />
+            <label className="block text-sm dark:text-neutral-300">Validite (jours)</label>
+            <input
+              type="number"
+              value={validityDays}
+              onChange={(e) => setValidityDays(Number(e.target.value))}
+              className="w-40 rounded border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            />
           </div>
-          <button className="px-4 py-2 bg-green-600 text-white rounded" onClick={handleApprove}>Approuver & Signer</button>
+          <button className="rounded bg-green-600 px-4 py-2 text-white" onClick={() => setShowApproveModal(true)}>
+            Approuver & Signer
+          </button>
           <div className="ml-6">
-            <label className="block text-sm">Raison du rejet</label>
-            <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="w-80 h-20 p-2 border rounded" />
+            <label className="block text-sm dark:text-neutral-300">Raison du rejet</label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="h-20 w-80 rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            />
             <div className="mt-2">
-              <button className="px-4 py-2 bg-red-600 text-white rounded" onClick={handleReject}>Rejeter</button>
+              <button className="rounded bg-red-600 px-4 py-2 text-white" onClick={() => setShowRejectModal(true)}>
+                Rejeter
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <Modal open={showApproveModal} title="Confirmer l'approbation" onClose={() => setShowApproveModal(false)}
+      <Modal
+        open={showApproveModal}
+        title="Confirmer l'approbation"
+        onClose={() => setShowApproveModal(false)}
         footer={
           <>
-            <Button onClick={() => setShowApproveModal(false)} variant="secondary">Annuler</Button>
-            <Button onClick={confirmApprove} disabled={busy} className="ml-2">{busy ? 'Traitement...' : 'Confirmer et signer'}</Button>
+            <Button onClick={() => setShowApproveModal(false)} variant="secondary">
+              Annuler
+            </Button>
+            <Button onClick={confirmApprove} disabled={busy} className="ml-2">
+              {busy ? 'Traitement...' : 'Confirmer et signer'}
+            </Button>
           </>
         }
       >
-        <div>Êtes-vous sûr de vouloir approuver et signer la CSR pour la demande <strong>{request.id}</strong> ?</div>
-        {errorMsg && <div className="text-red-600 mt-2">{errorMsg}</div>}
+        <div>Etes-vous sur de vouloir approuver et signer la CSR pour la demande <strong>{request.id}</strong> ?</div>
+        {errorMsg && <div className="mt-2 text-red-600 dark:text-red-300">{errorMsg}</div>}
       </Modal>
 
-      <Modal open={showRejectModal} title="Confirmer le rejet" onClose={() => setShowRejectModal(false)}
+      <Modal
+        open={showRejectModal}
+        title="Confirmer le rejet"
+        onClose={() => setShowRejectModal(false)}
         footer={
           <>
-            <Button onClick={() => setShowRejectModal(false)} variant="secondary">Annuler</Button>
-            <Button onClick={confirmReject} disabled={busy} className="ml-2">{busy ? 'Traitement...' : 'Rejeter'}</Button>
+            <Button onClick={() => setShowRejectModal(false)} variant="secondary">
+              Annuler
+            </Button>
+            <Button onClick={confirmReject} disabled={busy} className="ml-2">
+              {busy ? 'Traitement...' : 'Rejeter'}
+            </Button>
           </>
         }
       >
         <div className="mb-2">Veuillez confirmer le rejet de la demande <strong>{request.id}</strong>.</div>
-        <label className="block text-sm">Raison du rejet</label>
-        <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="w-full h-24 p-2 border rounded" />
-        {errorMsg && <div className="text-red-600 mt-2">{errorMsg}</div>}
+        <label className="block text-sm dark:text-neutral-300">Raison du rejet</label>
+        <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="h-24 w-full rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100" />
+        {errorMsg && <div className="mt-2 text-red-600 dark:text-red-300">{errorMsg}</div>}
       </Modal>
 
-      <Modal open={showPemModal} title="Certificat (PEM)" onClose={() => setShowPemModal(false)}
+      <Modal
+        open={showPemModal}
+        title="Certificat (PEM)"
+        onClose={() => setShowPemModal(false)}
         footer={
           <>
-            <Button onClick={copyPemToClipboard} variant="secondary">Copier</Button>
-            <Button onClick={() => downloadPem()} className="ml-2">Télécharger</Button>
-            <Button onClick={() => setShowPemModal(false)} className="ml-2">Fermer</Button>
+            <Button onClick={copyPemToClipboard} variant="secondary">
+              Copier
+            </Button>
+            <Button onClick={() => downloadPem()} className="ml-2">
+              Telecharger
+            </Button>
+            <Button onClick={() => setShowPemModal(false)} className="ml-2">
+              Fermer
+            </Button>
           </>
         }
       >
-        <pre className="max-h-96 overflow-auto p-2 bg-neutral-50 rounded text-xs">{pemText}</pre>
+        <pre className="max-h-96 overflow-auto rounded bg-neutral-50 p-2 text-xs dark:bg-neutral-800 dark:text-neutral-300">{pemText}</pre>
       </Modal>
     </div>
   );

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
-import Input from '../components/Input';
 import { useToast } from '../components/Toast';
 import { authService } from '../services/api';
 
@@ -10,7 +9,7 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
-  
+
   const token = searchParams.get('token');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,7 +21,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!token) {
-      setError('Lien de réinitialisation invalide ou expiré');
+      setError('Lien de reinitialisation invalide ou expire');
     }
   }, [token]);
 
@@ -32,7 +31,7 @@ export default function ResetPasswordPage() {
       return false;
     }
     if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
+      setError('Le mot de passe doit contenir au moins 8 caracteres');
       return false;
     }
     if (password !== confirmPassword) {
@@ -47,25 +46,22 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     if (!token) {
-      setError('Lien de réinitialisation invalide');
+      setError('Lien de reinitialisation invalide');
       return;
     }
 
-    if (!validatePassword()) {
-      return;
-    }
+    if (!validatePassword()) return;
 
     setLoading(true);
     try {
       await authService.resetPassword(token, password);
       setSuccess(true);
-      addToast({ type: 'success', message: 'Mot de passe réinitialisé avec succès' });
+      addToast({ type: 'success', message: 'Mot de passe reinitialise avec succes' });
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err: any) {
-      console.error('Erreur:', err);
-      const errorMsg = err?.response?.data?.error || 'Erreur lors de la réinitialisation';
+      const errorMsg = err?.response?.data?.error || 'Erreur lors de la reinitialisation';
       setError(errorMsg);
       addToast({ type: 'error', message: errorMsg });
     } finally {
@@ -75,19 +71,19 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 dark:from-neutral-950 dark:via-slate-950 dark:to-indigo-950/30 flex items-center justify-center">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6 text-center">
-            <div className="bg-red-100 p-3 rounded-full inline-block">
-              <Lock size={32} className="text-red-600" />
+          <div className="space-y-6 rounded-2xl bg-white p-8 text-center shadow-xl dark:bg-neutral-900">
+            <div className="inline-block rounded-full bg-red-100 p-3 dark:bg-red-950/40">
+              <Lock size={32} className="text-red-600 dark:text-red-300" />
             </div>
-            <h1 className="text-h2 font-bold text-neutral-900">Lien invalide</h1>
-            <p className="text-neutral-600">
-              Ce lien de réinitialisation est invalide ou a expiré. Veuillez demander une nouvelle réinitialisation.
+            <h1 className="text-h2 font-bold text-neutral-900 dark:text-neutral-100">Lien invalide</h1>
+            <p className="text-neutral-600 dark:text-neutral-400">
+              Ce lien de reinitialisation est invalide ou a expire. Veuillez demander une nouvelle reinitialisation.
             </p>
             <Link to="/forgot-password" className="block">
               <Button variant="primary" className="w-full">
-                Demander une réinitialisation
+                Demander une reinitialisation
               </Button>
             </Link>
           </div>
@@ -97,56 +93,51 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 dark:from-neutral-950 dark:via-slate-950 dark:to-indigo-950/30 flex items-center justify-center">
       <div className="w-full max-w-md">
-        {/* Bouton retour */}
-        <Link to="/login" className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-sm mb-8 transition">
+        <Link to="/login" className="mb-8 inline-flex items-center gap-2 text-sm text-indigo-600 transition hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200">
           <ArrowLeft size={16} />
-          Retour à la connexion
+          Retour a la connexion
         </Link>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-neutral-900">
           {!success ? (
             <>
-              {/* Header */}
               <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-8">
-                <div className="flex justify-center mb-4">
-                  <div className="bg-white/20 p-3 rounded-full">
+                <div className="mb-4 flex justify-center">
+                  <div className="rounded-full bg-white/20 p-3">
                     <Lock size={28} className="text-white" />
                   </div>
                 </div>
-                <h1 className="text-h2 font-bold text-white text-center">Nouveau mot de passe</h1>
-                <p className="text-indigo-100 text-center text-sm mt-2">
-                  Créez un nouveau mot de passe sécurisé
-                </p>
+                <h1 className="text-h2 text-center font-bold text-white">Nouveau mot de passe</h1>
+                <p className="mt-2 text-center text-sm text-indigo-100">Creez un nouveau mot de passe securise</p>
               </div>
 
-              {/* Formulaire */}
-              <form onSubmit={handleSubmit} className="p-8 space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 p-8">
                 {error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
                     {error}
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-neutral-700">Nouveau mot de passe</label>
+                  <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Nouveau mot de passe</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Minimum 8 caractères"
+                      placeholder="Minimum 8 caracteres"
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
                         setError(null);
                       }}
                       disabled={loading}
-                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                      className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:disabled:bg-neutral-800"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -154,7 +145,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-neutral-700">Confirmer le mot de passe</label>
+                  <label className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Confirmer le mot de passe</label>
                   <div className="relative">
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
@@ -165,54 +156,45 @@ export default function ResetPasswordPage() {
                         setError(null);
                       }}
                       disabled={loading}
-                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                      className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:disabled:bg-neutral-800"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                     >
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
-                  <strong>Conseils pour un mot de passe sécurisé :</strong>
-                  <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
-                    <li>Au moins 8 caractères</li>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+                  <strong>Conseils pour un mot de passe securise :</strong>
+                  <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
+                    <li>Au moins 8 caracteres</li>
                     <li>Mix de majuscules et minuscules</li>
                     <li>Incluez des chiffres et symboles</li>
                   </ul>
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  loading={loading}
-                >
-                  Réinitialiser le mot de passe
+                <Button type="submit" className="w-full" loading={loading}>
+                  Reinitialiser le mot de passe
                 </Button>
               </form>
             </>
           ) : (
-            <>
-              {/* Message de succès */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-8 py-12 text-center space-y-6">
-                <div className="flex justify-center">
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <Lock size={32} className="text-green-600" />
-                  </div>
+            <div className="space-y-6 bg-gradient-to-r from-green-50 to-emerald-50 px-8 py-12 text-center dark:from-green-950/30 dark:to-emerald-950/30">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-green-100 p-3 dark:bg-green-950/40">
+                  <Lock size={32} className="text-green-600 dark:text-green-300" />
                 </div>
-                <h2 className="text-h3 font-bold text-green-800">Mot de passe réinitialisé</h2>
-                <p className="text-green-700">
-                  Votre mot de passe a été modifié avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
-                </p>
-                <p className="text-sm text-neutral-600">
-                  Redirection vers la page de connexion...
-                </p>
               </div>
-            </>
+              <h2 className="text-h3 font-bold text-green-800 dark:text-green-300">Mot de passe reinitialise</h2>
+              <p className="text-green-700 dark:text-green-300/80">
+                Votre mot de passe a ete modifie avec succes. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
+              </p>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">Redirection vers la page de connexion...</p>
+            </div>
           )}
         </div>
       </div>

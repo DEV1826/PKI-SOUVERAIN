@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Shield, UserPlus, Mail, Lock, User } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { Shield, UserPlus, Mail, Lock, User } from 'lucide-react';
 import { authService } from '../services/api';
 
 export default function RegisterPage() {
@@ -34,8 +34,8 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      const user = await authService.register({ email, password, firstName, lastName });
-      setUser(user);
+      const createdUser = await authService.register({ email, password, firstName, lastName });
+      setUser(createdUser);
     } catch (err: any) {
       setError(err.response?.data?.message || "Erreur lors de l'inscription");
     } finally {
@@ -44,38 +44,26 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-indigo-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-indigo-50 p-4 dark:from-neutral-950 dark:via-slate-950 dark:to-indigo-950/30 flex items-center justify-center">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-indigo-200 opacity-20 blur-3xl filter mix-blend-multiply animate-blob dark:bg-indigo-900/40" />
+        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-indigo-100 opacity-20 blur-3xl filter mix-blend-multiply animate-blob animation-delay-2000 dark:bg-indigo-950/50" />
       </div>
 
       <div className="relative w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-neutral-200">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center w-14 h-14 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700 mx-auto mb-4 shadow-lg">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700 shadow-lg">
               <Shield className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Créer un compte</h1>
-            <p className="text-neutral-600">Rejoignez PKI Souverain en quelques minutes</p>
+            <h1 className="mb-2 text-3xl font-bold text-neutral-900 dark:text-neutral-100">Creer un compte</h1>
+            <p className="text-neutral-600 dark:text-neutral-400">Rejoignez PKI Souverain en quelques minutes</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Prénom"
-                value={firstName}
-                onChange={setFirstName}
-                icon={<User size={18} />}
-                required
-              />
-              <Input
-                label="Nom"
-                value={lastName}
-                onChange={setLastName}
-                icon={<User size={18} />}
-                required
-              />
+              <Input label="Prenom" value={firstName} onChange={setFirstName} icon={<User size={18} />} required />
+              <Input label="Nom" value={lastName} onChange={setLastName} icon={<User size={18} />} required />
             </div>
 
             <Input
@@ -93,14 +81,14 @@ export default function RegisterPage() {
               type="password"
               value={password}
               onChange={setPassword}
-              placeholder="••••••••"
+              placeholder="********"
               icon={<Lock size={18} />}
-              help="Au moins 8 caractères"
+              help="Au moins 8 caracteres"
               required
             />
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm font-medium">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
                 {error}
               </div>
             )}
@@ -120,26 +108,21 @@ export default function RegisterPage() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-200"></div>
+              <div className="w-full border-t border-neutral-200 dark:border-neutral-700" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-neutral-500">Vous avez un compte?</span>
+              <span className="bg-white px-2 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">Vous avez un compte?</span>
             </div>
           </div>
 
-          <Button
-            onClick={() => navigate('/login')}
-            variant="outline"
-            size="lg"
-            fullWidth
-          >
+          <Button onClick={() => navigate('/login')} variant="outline" size="lg" fullWidth>
             Se connecter
           </Button>
         </div>
 
-        <p className="text-center text-neutral-600 text-sm mt-6">
-          En créant un compte, vous acceptez nos {' '}
-          <a href="#" className="text-indigo-600 font-semibold hover:text-indigo-700">
+        <p className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
+          En creant un compte, vous acceptez nos{' '}
+          <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300 dark:hover:text-indigo-200">
             conditions d'utilisation
           </a>
         </p>
