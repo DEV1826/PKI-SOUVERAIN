@@ -44,6 +44,14 @@ public class UserController {
             "text/plain"
     );
 
+    private Path uploadRoot() {
+        String configured = System.getenv("PKI_UPLOAD_DIR");
+        if (configured != null && !configured.isBlank()) {
+            return Paths.get(configured);
+        }
+        return Paths.get(System.getProperty("user.dir"), "uploads");
+    }
+
     private final CertificateRepository certificateRepository;
     private final CertificateRequestRepository certificateRequestRepository;
 
@@ -277,7 +285,7 @@ public class UserController {
             return ResponseEntity.status(404).build();
         }
 
-        Path path = Paths.get(System.getProperty("user.dir"), "uploads", "certificate_requests", id.toString(), filename);
+        Path path = uploadRoot().resolve(Paths.get("certificate_requests", id.toString(), filename));
         if (!Files.exists(path)) return ResponseEntity.status(404).build();
         try {
             Resource resource = new UrlResource(path.toUri());
@@ -405,7 +413,7 @@ public class UserController {
                 throw new IllegalArgumentException("Fichiers non valides: " + String.join(",", invalid));
             }
 
-            Path base = Paths.get(System.getProperty("user.dir"), "uploads", "certificate_requests", requestId.toString());
+            Path base = uploadRoot().resolve(Paths.get("certificate_requests", requestId.toString()));
             Files.createDirectories(base);
             List<String> saved = new ArrayList<>();
             for (MultipartFile f : documents) {

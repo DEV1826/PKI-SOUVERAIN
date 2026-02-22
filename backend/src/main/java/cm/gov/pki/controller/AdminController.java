@@ -26,9 +26,17 @@ public class AdminController {
 	private final CAConfigurationRepository caConfigurationRepository;
 	private final UserRepository userRepository;
 	private final CertificateRepository certificateRepository;
-	private final CertificateRequestRepository certificateRequestRepository;
-	private final CAService caService;
-	private final EmailService emailService;
+		private final CertificateRequestRepository certificateRequestRepository;
+		private final CAService caService;
+		private final EmailService emailService;
+
+		private java.nio.file.Path uploadRoot() {
+			String configured = System.getenv("PKI_UPLOAD_DIR");
+			if (configured != null && !configured.isBlank()) {
+				return java.nio.file.Paths.get(configured);
+			}
+			return java.nio.file.Paths.get(System.getProperty("user.dir"), "uploads");
+		}
 
 	public AdminController(CAConfigurationRepository caConfigurationRepository,
 						   UserRepository userRepository,
@@ -262,7 +270,7 @@ public class AdminController {
 		if (req.getDocuments() == null || !java.util.Arrays.asList(req.getDocuments().split(",")).contains(filename)) {
 			return ResponseEntity.status(404).build();
 		}
-		java.nio.file.Path path = java.nio.file.Paths.get(System.getProperty("user.dir"), "uploads", "certificate_requests", id.toString(), filename);
+		java.nio.file.Path path = uploadRoot().resolve(java.nio.file.Paths.get("certificate_requests", id.toString(), filename));
 		if (!java.nio.file.Files.exists(path)) return ResponseEntity.status(404).build();
 		try {
 			org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(path.toUri());
