@@ -14,6 +14,7 @@ public interface CertificateRequestRepository extends JpaRepository<CertificateR
     List<CertificateRequest> findByUserOrderBySubmittedAtDesc(User user);
     Optional<CertificateRequest> findByIdAndUser(UUID id, User user);
     long countByStatus(String status);
+    long countByStatusIn(java.util.Collection<String> statuses);
 
     // Admin queries
     List<CertificateRequest> findByStatusOrderBySubmittedAtDesc(String status);

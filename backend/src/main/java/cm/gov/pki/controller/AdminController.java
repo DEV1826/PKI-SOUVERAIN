@@ -69,8 +69,10 @@ public class AdminController {
 			// Compter les utilisateurs
 			long totalUsers = userRepository.count();
 			
-			// Compter les demandes en attente
-			long pendingRequests = certificateRequestRepository.countByStatus("PENDING");
+			// Compter les demandes en attente d'action admin
+			long pendingRequests = certificateRequestRepository.countByStatusIn(
+				java.util.List.of("PENDING", "PENDING_REVIEW", "CSR_SUBMITTED")
+			);
 			
 			// Compter les certificats actifs
 			long activeCertificates = certificateRepository.countByStatus(Certificate.CertificateStatus.ACTIVE);
@@ -276,6 +278,51 @@ public class AdminController {
 		}
 	}
 
+	@PostMapping("/certificate-requests/{id}/review-approve")
+	public ResponseEntity<?> reviewApprove(Authentication authentication, @PathVariable("id") java.util.UUID id) {
+		if (authentication == null || !(authentication.getPrincipal() instanceof cm.gov.pki.entity.User)) {
+			return ResponseEntity.status(401).build();
+		}
+		cm.gov.pki.entity.User admin = (cm.gov.pki.entity.User) authentication.getPrincipal();
+		var opt = certificateRequestRepository.findById(id);
+		if (opt.isEmpty()) return ResponseEntity.status(404).build();
+		var req = opt.get();
+		if (!"PENDING_REVIEW".equalsIgnoreCase(req.getStatus()) && !"PENDING".equalsIgnoreCase(req.getStatus())) {
+			return ResponseEntity.status(400).body(java.util.Map.of("error", "Request not in review state"));
+		}
+
+		req.setStatus("REVIEW_APPROVED");
+		req.setReviewedAt(java.time.LocalDateTime.now());
+		req.setReviewedBy(admin);
+		req.setRejectionReason(null);
+		certificateRequestRepository.save(req);
+		return ResponseEntity.ok(java.util.Map.of("status", req.getStatus()));
+	}
+
+	@PostMapping("/certificate-requests/{id}/review-reject")
+	public ResponseEntity<?> reviewReject(
+			Authentication authentication,
+			@PathVariable("id") java.util.UUID id,
+			@RequestParam(value = "reason", required = false) String reason) {
+		if (authentication == null || !(authentication.getPrincipal() instanceof cm.gov.pki.entity.User)) {
+			return ResponseEntity.status(401).build();
+		}
+		cm.gov.pki.entity.User admin = (cm.gov.pki.entity.User) authentication.getPrincipal();
+		var opt = certificateRequestRepository.findById(id);
+		if (opt.isEmpty()) return ResponseEntity.status(404).build();
+		var req = opt.get();
+		if (!"PENDING_REVIEW".equalsIgnoreCase(req.getStatus()) && !"PENDING".equalsIgnoreCase(req.getStatus())) {
+			return ResponseEntity.status(400).body(java.util.Map.of("error", "Request not in review state"));
+		}
+
+		req.setStatus("NEEDS_CORRECTION");
+		req.setRejectionReason(reason == null ? "Informations ou pieces insuffisantes." : reason);
+		req.setReviewedAt(java.time.LocalDateTime.now());
+		req.setReviewedBy(admin);
+		certificateRequestRepository.save(req);
+		return ResponseEntity.ok(java.util.Map.of("status", req.getStatus(), "reason", req.getRejectionReason()));
+	}
+
 	@PostMapping("/certificate-requests/{id}/approve")
 	public ResponseEntity<?> approveRequest(Authentication authentication, @PathVariable("id") java.util.UUID id,
 										@RequestParam(value = "validityDays", defaultValue = "365") int validityDays) {
@@ -286,8 +333,8 @@ public class AdminController {
 		var opt = certificateRequestRepository.findById(id);
 		if (opt.isEmpty()) return ResponseEntity.status(404).build();
 		var req = opt.get();
-		if (!"PENDING".equalsIgnoreCase(req.getStatus())) {
-			return ResponseEntity.status(400).body(java.util.Map.of("error", "Request not in PENDING state"));
+		if (!"CSR_SUBMITTED".equalsIgnoreCase(req.getStatus())) {
+			return ResponseEntity.status(400).body(java.util.Map.of("error", "Request must be in CSR_SUBMITTED state"));
 		}
 		if (req.getCsrContent() == null || req.getCsrContent().isBlank()) {
 			return ResponseEntity.status(400).body(java.util.Map.of("error", "No CSR provided for this request"));
@@ -322,8 +369,8 @@ public class AdminController {
 		var opt = certificateRequestRepository.findById(id);
 		if (opt.isEmpty()) return ResponseEntity.status(404).build();
 		var req = opt.get();
-		if (!"PENDING".equalsIgnoreCase(req.getStatus())) {
-			return ResponseEntity.status(400).body(java.util.Map.of("error", "Request not in PENDING state"));
+		if (!"CSR_SUBMITTED".equalsIgnoreCase(req.getStatus()) && !"REVIEW_APPROVED".equalsIgnoreCase(req.getStatus())) {
+			return ResponseEntity.status(400).body(java.util.Map.of("error", "Request not in CSR review state"));
 		}
 		req.setStatus("REJECTED");
 		req.setRejectionReason(reason == null ? "" : reason);
