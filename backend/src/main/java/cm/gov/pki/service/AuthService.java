@@ -88,12 +88,23 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Email ou mot de passe invalide"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        boolean passwordMatches;
+        try {
+            passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException("Email ou mot de passe invalide");
+        }
+
+        if (!passwordMatches) {
             throw new RuntimeException("Email ou mot de passe invalide");
         }
 
         if (!user.canLogin()) {
             throw new RuntimeException("Compte inactif ou email non vérifié");
+        }
+
+        if (user.getRole() == null) {
+            user.setRole(User.UserRole.USER);
         }
 
         // Mise à jour last login
@@ -122,11 +133,12 @@ public class AuthService {
     private String generateAccessToken(User user) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
+        User.UserRole userRole = user.getRole() == null ? User.UserRole.USER : user.getRole();
 
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim("email", user.getEmail())
-                .claim("role", user.getRole().name())
+                .claim("role", userRole.name())
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -243,11 +255,12 @@ public class AuthService {
      */
     private AuthDTO.UserDTO mapToDTO(User user) {
         AuthDTO.UserDTO dto = new AuthDTO.UserDTO();
+        User.UserRole userRole = user.getRole() == null ? User.UserRole.USER : user.getRole();
         dto.setId(user.getId());
         dto.setEmail(user.getEmail());
         dto.setFirstName(user.getFirstName());
         dto.setLastName(user.getLastName());
-        dto.setRole(user.getRole().name());
+        dto.setRole(userRole.name());
         dto.setIsActive(user.getIsActive());
         dto.setEmailVerified(user.getEmailVerified());
         dto.setCreatedAt(user.getCreatedAt());
