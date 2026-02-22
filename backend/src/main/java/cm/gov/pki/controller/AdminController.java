@@ -262,22 +262,30 @@ public class AdminController {
 		return ResponseEntity.ok(dto);
 	}
 
-	@GetMapping("/certificate-requests/{id}/documents/{filename}")
-	public ResponseEntity<?> adminDownloadDocument(@PathVariable("id") java.util.UUID id, @PathVariable("filename") String filename) {
+		@GetMapping("/certificate-requests/{id}/documents/{filename}")
+		public ResponseEntity<?> adminDownloadDocument(@PathVariable("id") java.util.UUID id, @PathVariable("filename") String filename) {
 		var opt = certificateRequestRepository.findById(id);
 		if (opt.isEmpty()) return ResponseEntity.status(404).build();
 		var req = opt.get();
 		if (req.getDocuments() == null || !java.util.Arrays.asList(req.getDocuments().split(",")).contains(filename)) {
 			return ResponseEntity.status(404).build();
 		}
-		java.nio.file.Path path = uploadRoot().resolve(java.nio.file.Paths.get("certificate_requests", id.toString(), filename));
-		if (!java.nio.file.Files.exists(path)) return ResponseEntity.status(404).build();
-		try {
-			org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(path.toUri());
-			return ResponseEntity.ok()
-					.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-					.body(resource);
-		} catch (java.net.MalformedURLException ex) {
+			java.nio.file.Path path = uploadRoot().resolve(java.nio.file.Paths.get("certificate_requests", id.toString(), filename));
+			if (!java.nio.file.Files.exists(path)) return ResponseEntity.status(404).build();
+			try {
+				org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(path.toUri());
+				String contentType = "application/octet-stream";
+				String lower = filename.toLowerCase();
+				if (lower.endsWith(".pdf")) contentType = "application/pdf";
+				else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) contentType = "image/jpeg";
+				else if (lower.endsWith(".png")) contentType = "image/png";
+				else if (lower.endsWith(".gif")) contentType = "image/gif";
+				else if (lower.endsWith(".txt")) contentType = "text/plain";
+				return ResponseEntity.ok()
+						.header(org.springframework.http.HttpHeaders.CONTENT_TYPE, contentType)
+						.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+						.body(resource);
+			} catch (java.net.MalformedURLException ex) {
 			log.error("URL invalide pour le fichier {} du téléchargement admin {}", filename, id, ex);
 			return ResponseEntity.status(400).body(java.util.Map.of("error", "Nom de fichier invalide"));
 		} catch (RuntimeException ex) {
