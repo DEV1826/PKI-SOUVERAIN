@@ -6,6 +6,7 @@ import cm.gov.pki.entity.CertificateRequest;
 import cm.gov.pki.entity.User;
 import cm.gov.pki.repository.CertificateRepository;
 import cm.gov.pki.repository.CertificateRequestRepository;
+import cm.gov.pki.service.CAService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,11 +55,17 @@ public class UserController {
 
     private final CertificateRepository certificateRepository;
     private final CertificateRequestRepository certificateRequestRepository;
+    private final CAService caService;
 
     @Autowired
-    public UserController(CertificateRepository certificateRepository, CertificateRequestRepository certificateRequestRepository) {
+    public UserController(
+            CertificateRepository certificateRepository,
+            CertificateRequestRepository certificateRequestRepository,
+            CAService caService
+    ) {
         this.certificateRepository = certificateRepository;
         this.certificateRequestRepository = certificateRequestRepository;
+        this.caService = caService;
     }
 
     @GetMapping("/me")
@@ -249,11 +256,54 @@ public class UserController {
             return ResponseEntity.status(400).body(Map.of("error", "Un CSR est requis (texte ou fichier)"));
         }
 
+        return finalizeCsrSubmission(req, csrContent);
+    }
+
+    /**
+     * Etape 3 (alternative): generation serveur d'une CSR puis soumission directe.
+     */
+    @PostMapping("/certificate-requests/{id}/generate-csr")
+    public ResponseEntity<?> generateAndSubmitCsr(
+            Authentication authentication,
+            @PathVariable("id") UUID id,
+            @RequestParam(name = "cn", required = false) String cn,
+            @RequestParam(name = "o", required = false) String organization,
+            @RequestParam(name = "c", required = false) String country
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = (User) authentication.getPrincipal();
+        var opt = certificateRequestRepository.findByIdAndUser(id, user);
+        if (opt.isEmpty()) return ResponseEntity.status(404).build();
+        CertificateRequest req = opt.get();
+
+        if (!"REVIEW_APPROVED".equalsIgnoreCase(req.getStatus())) {
+            return ResponseEntity.status(400).body(Map.of("error", "Admin verification not approved yet"));
+        }
+
+        String resolvedCn = (cn == null || cn.isBlank()) ? req.getCommonName() : cn.trim();
+        String resolvedOrg = (organization == null || organization.isBlank()) ? req.getOrganization() : organization.trim();
+        String resolvedCountry = (country == null || country.isBlank()) ? req.getCountry() : country.trim().toUpperCase();
+        if (resolvedCn == null || resolvedCn.isBlank()) {
+            return ResponseEntity.status(400).body(Map.of("error", "Common Name requis"));
+        }
+        if (resolvedOrg == null || resolvedOrg.isBlank()) {
+            return ResponseEntity.status(400).body(Map.of("error", "Organisation requise"));
+        }
+        if (resolvedCountry == null || !resolvedCountry.matches("^[A-Za-z]{2}$")) {
+            return ResponseEntity.status(400).body(Map.of("error", "Pays invalide (ISO 2 lettres)"));
+        }
+
+        String generatedCsr = caService.generateCSR(resolvedCn, resolvedOrg, resolvedCountry);
+        return finalizeCsrSubmission(req, generatedCsr);
+    }
+
+    private ResponseEntity<?> finalizeCsrSubmission(CertificateRequest req, String csrContent) {
         req.setCsrContent(csrContent);
         req.setStatus("CSR_SUBMITTED");
         req.setSubmittedAt(LocalDateTime.now());
         req = certificateRequestRepository.save(req);
-
         return ResponseEntity.ok(Map.of("requestId", req.getId().toString(), "status", req.getStatus()));
     }
 
