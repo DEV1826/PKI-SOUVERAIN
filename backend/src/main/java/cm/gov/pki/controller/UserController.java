@@ -268,7 +268,11 @@ public class UserController {
             @PathVariable("id") UUID id,
             @RequestParam(name = "cn", required = false) String cn,
             @RequestParam(name = "o", required = false) String organization,
-            @RequestParam(name = "c", required = false) String country
+            @RequestParam(name = "ou", required = false) String organizationalUnit,
+            @RequestParam(name = "l", required = false) String locality,
+            @RequestParam(name = "st", required = false) String state,
+            @RequestParam(name = "c", required = false) String country,
+            @RequestParam(name = "email", required = false) String email
     ) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
             return ResponseEntity.status(401).build();
@@ -295,7 +299,20 @@ public class UserController {
             return ResponseEntity.status(400).body(Map.of("error", "Pays invalide (ISO 2 lettres)"));
         }
 
-        String generatedCsr = caService.generateCSR(resolvedCn, resolvedOrg, resolvedCountry);
+        String resolvedOu = (organizationalUnit == null || organizationalUnit.isBlank()) ? req.getOrganizationalUnit() : organizationalUnit.trim();
+        String resolvedLocality = (locality == null || locality.isBlank()) ? req.getLocality() : locality.trim();
+        String resolvedState = (state == null || state.isBlank()) ? req.getState() : state.trim();
+        String resolvedEmail = (email == null || email.isBlank()) ? req.getEmail() : email.trim();
+
+        String generatedCsr = caService.generateCSR(
+                resolvedCn,
+                resolvedOrg,
+                resolvedOu,
+                resolvedLocality,
+                resolvedState,
+                resolvedCountry,
+                resolvedEmail
+        );
         return finalizeCsrSubmission(req, generatedCsr);
     }
 

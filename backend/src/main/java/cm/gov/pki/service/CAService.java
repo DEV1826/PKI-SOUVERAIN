@@ -341,6 +341,55 @@ public class CAService {
             throw new RuntimeException("Ã‰chec gÃ©nÃ©ration CSR: " + e.getMessage(), e);
         }
     }
+    public String generateCSR(
+            String commonName,
+            String organization,
+            String organizationalUnit,
+            String locality,
+            String state,
+            String country,
+            String email
+    ) {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", BouncyCastleProvider.PROVIDER_NAME);
+            kpg.initialize(2048, new SecureRandom());
+            KeyPair kp = kpg.generateKeyPair();
+
+            StringBuilder dn = new StringBuilder();
+            appendDn(dn, "CN", commonName);
+            appendDn(dn, "O", organization);
+            appendDn(dn, "OU", organizationalUnit);
+            appendDn(dn, "L", locality);
+            appendDn(dn, "ST", state);
+            appendDn(dn, "C", country);
+            appendDn(dn, "E", email);
+
+            X500Name subject = new X500Name(dn.toString());
+            org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder csrBuilder =
+                    new org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder(subject, kp.getPublic());
+
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA")
+                    .setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                    .build(kp.getPrivate());
+
+            PKCS10CertificationRequest csr = csrBuilder.build(signer);
+            StringWriter sw = new StringWriter();
+            try (JcaPEMWriter pw = new JcaPEMWriter(sw)) {
+                pw.writeObject(csr);
+            }
+            return sw.toString();
+        } catch (Exception e) {
+            log.error("Failed to generate CSR", e);
+            throw new RuntimeException("Echec generation CSR: " + e.getMessage(), e);
+        }
+    }
+
+    private static void appendDn(StringBuilder dn, String key, String value) {
+        if (value == null || value.isBlank()) return;
+        if (!dn.isEmpty()) dn.append(", ");
+        String safe = value.trim().replace("\\", "\\\\").replace(",", "\\,");
+        dn.append(key).append("=").append(safe);
+    }
 
     /**
      * GÃ©nÃ©rer une AC intermÃ©diaire signÃ©e par l'AC racine active
