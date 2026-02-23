@@ -33,7 +33,7 @@ import java.util.*;
 public class UserController {
 
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
-    private static final long MAX_FILE_SIZE = 20L * 1024L * 1024L; // 20MB
+    private static final long MAX_FILE_SIZE = 100L * 1024L * 1024L; // 100MB
     private static final long MAX_CSR_SIZE = 200L * 1024L; // 200KB
     private static final List<String> ALLOWED_TYPES = List.of(
             "application/pdf",
