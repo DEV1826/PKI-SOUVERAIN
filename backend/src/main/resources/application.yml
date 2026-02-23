@@ -48,6 +48,9 @@ spring:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
     default-encoding: UTF-8
 
 # Configuration PKI
