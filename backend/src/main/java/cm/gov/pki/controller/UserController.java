@@ -7,6 +7,7 @@ import cm.gov.pki.entity.User;
 import cm.gov.pki.repository.CertificateRepository;
 import cm.gov.pki.repository.CertificateRequestRepository;
 import cm.gov.pki.service.CAService;
+import cm.gov.pki.service.IdentityDocumentAiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,16 +57,19 @@ public class UserController {
     private final CertificateRepository certificateRepository;
     private final CertificateRequestRepository certificateRequestRepository;
     private final CAService caService;
+    private final IdentityDocumentAiService identityDocumentAiService;
 
     @Autowired
     public UserController(
             CertificateRepository certificateRepository,
             CertificateRequestRepository certificateRequestRepository,
-            CAService caService
+            CAService caService,
+            IdentityDocumentAiService identityDocumentAiService
     ) {
         this.certificateRepository = certificateRepository;
         this.certificateRequestRepository = certificateRequestRepository;
         this.caService = caService;
+        this.identityDocumentAiService = identityDocumentAiService;
     }
 
     @GetMapping("/me")
@@ -529,8 +533,11 @@ public class UserController {
                 invalid.add(f.getOriginalFilename() == null ? "file" : f.getOriginalFilename());
                 continue;
             }
-            if (!looksLikeIdentityDocument(f, expectedIdentityType)) {
-                invalid.add((f.getOriginalFilename() == null ? "file" : f.getOriginalFilename()) + " (piece non reconnue)");
+            var validation = identityDocumentAiService.validateIdentityDocument(f, expectedIdentityType);
+            if (!validation.accepted()) {
+                invalid.add((f.getOriginalFilename() == null ? "file" : f.getOriginalFilename()) + " (" + validation.message() + ")");
+            } else if (validation.confidence() < 0.45) {
+                log.warn("Low AI confidence for request {} file {}: {}", requestId, f.getOriginalFilename(), validation.message());
             }
         }
         if (!invalid.isEmpty()) {
@@ -558,52 +565,6 @@ public class UserController {
             log.error("Error saving documents for request {}", requestId, ex);
             throw new RuntimeException("Erreur technique lors de l'enregistrement des fichiers", ex);
         }
-    }
-
-    /**
-     * Heuristique "IA v1" locale : classification basique du document via nom de fichier + contenu texte partiel.
-     * Cette validation bloque les uploads qui ne ressemblent pas a une CNI / un Passeport.
-     */
-    private boolean looksLikeIdentityDocument(MultipartFile file, String expectedIdentityType) {
-        try {
-            String expected = expectedIdentityType == null ? "" : expectedIdentityType.trim().toUpperCase(java.util.Locale.ROOT);
-            String fileName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(java.util.Locale.ROOT);
-
-            String contentSnippet = "";
-            if (file.getSize() > 0) {
-                byte[] bytes = file.getBytes();
-                int max = (int) Math.min(bytes.length, 48_000);
-                contentSnippet = new String(bytes, 0, max, StandardCharsets.UTF_8).toLowerCase(java.util.Locale.ROOT);
-            }
-
-            // Score simple par mots-clés
-            int cniScore = 0;
-            int passportScore = 0;
-
-            if (containsAny(fileName, "cni", "identite", "identity", "national_id", "id_card", "carte")) cniScore += 3;
-            if (containsAny(contentSnippet, "carte nationale", "identite", "national identity", "id card", "cni")) cniScore += 2;
-
-            if (containsAny(fileName, "passport", "passeport", "mrz")) passportScore += 3;
-            if (containsAny(contentSnippet, "passport", "passeport", "p<", "travel document")) passportScore += 2;
-
-            // Si type attendu explicite, il doit matcher ce type
-            if ("CNI".equals(expected)) return cniScore >= 2;
-            if ("PASSEPORT".equals(expected)) return passportScore >= 2;
-
-            // Sinon accepter si l'un des deux est reconnu
-            return cniScore >= 2 || passportScore >= 2;
-        } catch (Exception e) {
-            log.warn("Impossible d'analyser le document d'identite: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    private boolean containsAny(String text, String... keys) {
-        if (text == null || text.isBlank()) return false;
-        for (String k : keys) {
-            if (text.contains(k)) return true;
-        }
-        return false;
     }
 
     public static class CertificateDTO {

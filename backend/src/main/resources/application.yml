@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8080
   servlet:
     context-path: /api
@@ -12,7 +12,7 @@ spring:
       max-file-size: 100MB
       max-request-size: 200MB
 
-  # Base de donnÃ©es PostgreSQL
+  # Base de donnÃƒÂ©es PostgreSQL
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -79,12 +79,18 @@ pki:
     expiration: 900000           # 15 minutes (en ms)
     refresh-expiration: 604800000 # 7 jours (en ms)
   
-  # Configuration AC par dÃ©faut
+  # Configuration AC par dÃƒÂ©faut
   ca-defaults:
-    name: "AutoritÃ© de Certification Souveraine"
+    name: "AutoritÃƒÂ© de Certification Souveraine"
     validity-years: 10
     key-size: 4096
     algorithm: RSA
+  # Validation IA des pieces d'identite
+  identity-ai:
+    provider: ${PKI_ID_AI_PROVIDER:heuristic}      # heuristic | google
+    strict-mode: ${PKI_ID_AI_STRICT_MODE:false}    # false: n bloque pas en cas de doute
+    google:
+      api-key: ${PKI_ID_AI_GOOGLE_API_KEY:}
 
 # Actuator (Monitoring)
 management:
@@ -116,3 +122,4 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
+
