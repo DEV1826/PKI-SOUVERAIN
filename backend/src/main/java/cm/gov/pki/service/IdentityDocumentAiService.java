@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -12,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -32,12 +35,27 @@ public class IdentityDocumentAiService {
     @Value("${pki.identity-ai.google.api-key:}")
     private String googleApiKey;
 
+    @Value("${pki.identity-ai.local.url:http://localhost:8000/validate}")
+    private String localUrl;
+
+    @Value("${pki.identity-ai.local.api-key:}")
+    private String localApiKey;
+
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ValidationResult validateIdentityDocument(MultipartFile file, String expectedType) {
         String expected = expectedType == null ? "" : expectedType.trim().toUpperCase(Locale.ROOT);
         try {
+            String providerValue = provider == null ? "heuristic" : provider.trim().toLowerCase(Locale.ROOT);
+            if ("local".equals(providerValue)) {
+                ValidationResult local = validateWithLocalService(file, expected);
+                if (!local.accepted && !strictMode) {
+                    return new ValidationResult(true, local.confidence, "Validation IA faible (mode souple): " + local.message);
+                }
+                return local;
+            }
+
             String text = extractText(file);
             ValidationResult classified = classify(file, text, expected);
 
@@ -53,6 +71,36 @@ public class IdentityDocumentAiService {
             }
             return new ValidationResult(true, 0.0, "Analyse IA indisponible (mode souple)");
         }
+    }
+
+    private ValidationResult validateWithLocalService(MultipartFile file, String expectedType) throws Exception {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        if (localApiKey != null && !localApiKey.isBlank()) {
+            headers.add("X-API-Key", localApiKey);
+        }
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("expectedType", expectedType);
+        body.add("file", new ByteArrayResource(file.getBytes()) {
+            @Override
+            public String getFilename() {
+                String original = file.getOriginalFilename();
+                return (original == null || original.isBlank()) ? "document.bin" : original;
+            }
+        });
+
+        HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(body, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(localUrl, entity, String.class);
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null || response.getBody().isBlank()) {
+            throw new IllegalStateException("Local AI service returned " + response.getStatusCode().value());
+        }
+
+        JsonNode root = objectMapper.readTree(response.getBody());
+        boolean accepted = root.path("accepted").asBoolean(false);
+        double confidence = root.path("confidence").asDouble(0.0);
+        String message = root.path("message").asText("Local AI response");
+        return new ValidationResult(accepted, confidence, message);
     }
 
     private String extractText(MultipartFile file) {
@@ -152,4 +200,3 @@ public class IdentityDocumentAiService {
 
     public record ValidationResult(boolean accepted, double confidence, String message) {}
 }
-
