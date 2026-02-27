@@ -155,7 +155,7 @@ public class UserController {
         req.setSubmittedAt(LocalDateTime.now());
         req = certificateRequestRepository.save(req);
 
-        String savedDocs = saveDocuments(req.getId(), documents);
+        String savedDocs = saveDocuments(req.getId(), documents, req.getIdentityDocumentType());
         if (savedDocs == null) {
             try {
                 certificateRequestRepository.delete(req);
@@ -233,7 +233,7 @@ public class UserController {
         }
 
         if (documents != null && documents.length > 0) {
-            String savedDocs = saveDocuments(req.getId(), documents);
+            String savedDocs = saveDocuments(req.getId(), documents, req.getIdentityDocumentType());
             if (savedDocs == null) {
                 return ResponseEntity.status(500).body(Map.of("error", "Erreur lors de l'enregistrement des fichiers"));
             }
@@ -506,7 +506,7 @@ public class UserController {
         }
     }
 
-    private String saveDocuments(UUID requestId, MultipartFile[] documents) {
+    private String saveDocuments(UUID requestId, MultipartFile[] documents, String expectedIdentityType) {
         if (documents == null || documents.length == 0) return "";
         try {
             List<String> invalid = new ArrayList<>();
@@ -515,10 +515,14 @@ public class UserController {
                 String ct = f.getContentType();
                 if (ct == null || !ALLOWED_TYPES.contains(ct.toLowerCase()) || f.getSize() > MAX_FILE_SIZE) {
                     invalid.add(f.getOriginalFilename() == null ? "file" : f.getOriginalFilename());
+                    continue;
+                }
+                if (!looksLikeIdentityDocument(f, expectedIdentityType)) {
+                    invalid.add((f.getOriginalFilename() == null ? "file" : f.getOriginalFilename()) + " (piece non reconnue)");
                 }
             }
             if (!invalid.isEmpty()) {
-                throw new IllegalArgumentException("Fichiers non valides: " + String.join(",", invalid));
+                throw new IllegalArgumentException("Seules les pieces d'identite CNI/Passeport sont acceptees. Fichiers non valides: " + String.join(",", invalid));
             }
 
             Path base = uploadRoot().resolve(Paths.get("certificate_requests", requestId.toString()));
@@ -544,6 +548,52 @@ public class UserController {
             log.error("Error saving documents for request {}", requestId, ex);
             return null;
         }
+    }
+
+    /**
+     * Heuristique "IA v1" locale : classification basique du document via nom de fichier + contenu texte partiel.
+     * Cette validation bloque les uploads qui ne ressemblent pas a une CNI / un Passeport.
+     */
+    private boolean looksLikeIdentityDocument(MultipartFile file, String expectedIdentityType) {
+        try {
+            String expected = expectedIdentityType == null ? "" : expectedIdentityType.trim().toUpperCase(java.util.Locale.ROOT);
+            String fileName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(java.util.Locale.ROOT);
+
+            String contentSnippet = "";
+            if (file.getSize() > 0) {
+                byte[] bytes = file.getBytes();
+                int max = (int) Math.min(bytes.length, 48_000);
+                contentSnippet = new String(bytes, 0, max, StandardCharsets.UTF_8).toLowerCase(java.util.Locale.ROOT);
+            }
+
+            // Score simple par mots-clés
+            int cniScore = 0;
+            int passportScore = 0;
+
+            if (containsAny(fileName, "cni", "identite", "identity", "national_id", "id_card", "carte")) cniScore += 3;
+            if (containsAny(contentSnippet, "carte nationale", "identite", "national identity", "id card", "cni")) cniScore += 2;
+
+            if (containsAny(fileName, "passport", "passeport", "mrz")) passportScore += 3;
+            if (containsAny(contentSnippet, "passport", "passeport", "p<", "travel document")) passportScore += 2;
+
+            // Si type attendu explicite, il doit matcher ce type
+            if ("CNI".equals(expected)) return cniScore >= 2;
+            if ("PASSEPORT".equals(expected)) return passportScore >= 2;
+
+            // Sinon accepter si l'un des deux est reconnu
+            return cniScore >= 2 || passportScore >= 2;
+        } catch (Exception e) {
+            log.warn("Impossible d'analyser le document d'identite: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean containsAny(String text, String... keys) {
+        if (text == null || text.isBlank()) return false;
+        for (String k : keys) {
+            if (text.contains(k)) return true;
+        }
+        return false;
     }
 
     public static class CertificateDTO {
