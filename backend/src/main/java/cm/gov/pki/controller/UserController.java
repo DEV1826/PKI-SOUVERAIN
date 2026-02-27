@@ -112,6 +112,14 @@ public class UserController {
             @RequestParam(name = "state", required = false) String state,
             @RequestParam(name = "country", required = false) String country,
             @RequestParam(name = "email", required = false) String email,
+            @RequestParam(name = "firstName", required = false) String firstName,
+            @RequestParam(name = "lastName", required = false) String lastName,
+            @RequestParam(name = "birthDate", required = false) String birthDate,
+            @RequestParam(name = "birthPlace", required = false) String birthPlace,
+            @RequestParam(name = "nationality", required = false) String nationality,
+            @RequestParam(name = "identityDocumentType", required = false) String identityDocumentType,
+            @RequestParam(name = "identityDocumentNumber", required = false) String identityDocumentNumber,
+            @RequestParam(name = "identityDocumentExpiry", required = false) String identityDocumentExpiry,
             @RequestPart(name = "documents", required = false) MultipartFile[] documents
     ) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
@@ -128,6 +136,14 @@ public class UserController {
         req.setState(state);
         req.setCountry(country);
         req.setEmail((email == null || email.isBlank()) ? user.getEmail() : email.trim());
+        req.setFirstName((firstName == null || firstName.isBlank()) ? user.getFirstName() : firstName.trim());
+        req.setLastName((lastName == null || lastName.isBlank()) ? user.getLastName() : lastName.trim());
+        req.setBirthPlace((birthPlace == null || birthPlace.isBlank()) ? null : birthPlace.trim());
+        req.setNationality((nationality == null || nationality.isBlank()) ? null : nationality.trim().toUpperCase());
+        req.setIdentityDocumentType((identityDocumentType == null || identityDocumentType.isBlank()) ? null : identityDocumentType.trim().toUpperCase());
+        req.setIdentityDocumentNumber((identityDocumentNumber == null || identityDocumentNumber.isBlank()) ? null : identityDocumentNumber.trim());
+        req.setBirthDate(parseOptionalDate(birthDate));
+        req.setIdentityDocumentExpiry(parseOptionalDate(identityDocumentExpiry));
         req.setCsrContent(null);
 
         String validationError = validateBaseRequest(req);
@@ -173,6 +189,14 @@ public class UserController {
             @RequestParam(name = "state", required = false) String state,
             @RequestParam(name = "country", required = false) String country,
             @RequestParam(name = "email", required = false) String email,
+            @RequestParam(name = "firstName", required = false) String firstName,
+            @RequestParam(name = "lastName", required = false) String lastName,
+            @RequestParam(name = "birthDate", required = false) String birthDate,
+            @RequestParam(name = "birthPlace", required = false) String birthPlace,
+            @RequestParam(name = "nationality", required = false) String nationality,
+            @RequestParam(name = "identityDocumentType", required = false) String identityDocumentType,
+            @RequestParam(name = "identityDocumentNumber", required = false) String identityDocumentNumber,
+            @RequestParam(name = "identityDocumentExpiry", required = false) String identityDocumentExpiry,
             @RequestPart(name = "documents", required = false) MultipartFile[] documents
     ) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
@@ -194,6 +218,14 @@ public class UserController {
         req.setState(state);
         req.setCountry((country == null || country.isBlank()) ? req.getCountry() : country.trim());
         if (email != null && !email.isBlank()) req.setEmail(email.trim());
+        if (firstName != null && !firstName.isBlank()) req.setFirstName(firstName.trim());
+        if (lastName != null && !lastName.isBlank()) req.setLastName(lastName.trim());
+        if (birthPlace != null && !birthPlace.isBlank()) req.setBirthPlace(birthPlace.trim());
+        if (nationality != null && !nationality.isBlank()) req.setNationality(nationality.trim().toUpperCase());
+        if (identityDocumentType != null && !identityDocumentType.isBlank()) req.setIdentityDocumentType(identityDocumentType.trim().toUpperCase());
+        if (identityDocumentNumber != null && !identityDocumentNumber.isBlank()) req.setIdentityDocumentNumber(identityDocumentNumber.trim());
+        if (birthDate != null) req.setBirthDate(parseOptionalDate(birthDate));
+        if (identityDocumentExpiry != null) req.setIdentityDocumentExpiry(parseOptionalDate(identityDocumentExpiry));
 
         String validationError = validateBaseRequest(req);
         if (validationError != null) {
@@ -465,6 +497,15 @@ public class UserController {
         return null;
     }
 
+    private java.time.LocalDate parseOptionalDate(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return java.time.LocalDate.parse(value);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private String saveDocuments(UUID requestId, MultipartFile[] documents) {
         if (documents == null || documents.length == 0) return "";
         try {
@@ -555,6 +596,14 @@ public class UserController {
         private String state;
         private String country;
         private String email;
+        private String firstName;
+        private String lastName;
+        private String birthDate;
+        private String birthPlace;
+        private String nationality;
+        private String identityDocumentType;
+        private String identityDocumentNumber;
+        private String identityDocumentExpiry;
         private String status;
         private String submittedAt;
         private String rejectionReason;
@@ -571,6 +620,14 @@ public class UserController {
             this.state = r.getState();
             this.country = r.getCountry();
             this.email = r.getEmail();
+            this.firstName = r.getFirstName();
+            this.lastName = r.getLastName();
+            this.birthDate = r.getBirthDate() != null ? r.getBirthDate().toString() : null;
+            this.birthPlace = r.getBirthPlace();
+            this.nationality = r.getNationality();
+            this.identityDocumentType = r.getIdentityDocumentType();
+            this.identityDocumentNumber = r.getIdentityDocumentNumber();
+            this.identityDocumentExpiry = r.getIdentityDocumentExpiry() != null ? r.getIdentityDocumentExpiry().toString() : null;
             this.status = r.getStatus();
             this.submittedAt = r.getSubmittedAt() != null ? r.getSubmittedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
             this.rejectionReason = r.getRejectionReason();
@@ -593,6 +650,22 @@ public class UserController {
         public void setCountry(String country) { this.country = country; }
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
+        public String getFirstName() { return firstName; }
+        public void setFirstName(String firstName) { this.firstName = firstName; }
+        public String getLastName() { return lastName; }
+        public void setLastName(String lastName) { this.lastName = lastName; }
+        public String getBirthDate() { return birthDate; }
+        public void setBirthDate(String birthDate) { this.birthDate = birthDate; }
+        public String getBirthPlace() { return birthPlace; }
+        public void setBirthPlace(String birthPlace) { this.birthPlace = birthPlace; }
+        public String getNationality() { return nationality; }
+        public void setNationality(String nationality) { this.nationality = nationality; }
+        public String getIdentityDocumentType() { return identityDocumentType; }
+        public void setIdentityDocumentType(String identityDocumentType) { this.identityDocumentType = identityDocumentType; }
+        public String getIdentityDocumentNumber() { return identityDocumentNumber; }
+        public void setIdentityDocumentNumber(String identityDocumentNumber) { this.identityDocumentNumber = identityDocumentNumber; }
+        public String getIdentityDocumentExpiry() { return identityDocumentExpiry; }
+        public void setIdentityDocumentExpiry(String identityDocumentExpiry) { this.identityDocumentExpiry = identityDocumentExpiry; }
         public String getStatus() { return status; }
         public void setStatus(String status) { this.status = status; }
         public String getSubmittedAt() { return submittedAt; }

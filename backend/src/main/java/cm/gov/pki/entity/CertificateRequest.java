@@ -47,6 +47,30 @@ public class CertificateRequest {
     @Column(name = "email", nullable = false)
     private String email;
 
+    @Column(name = "first_name")
+    private String firstName;
+
+    @Column(name = "last_name")
+    private String lastName;
+
+    @Column(name = "birth_date")
+    private java.time.LocalDate birthDate;
+
+    @Column(name = "birth_place")
+    private String birthPlace;
+
+    @Column(name = "nationality", length = 2)
+    private String nationality;
+
+    @Column(name = "identity_document_type", length = 50)
+    private String identityDocumentType;
+
+    @Column(name = "identity_document_number")
+    private String identityDocumentNumber;
+
+    @Column(name = "identity_document_expiry")
+    private java.time.LocalDate identityDocumentExpiry;
+
     @Column(name = "status", length = 50)
     private String status = "PENDING";
 
@@ -147,6 +171,30 @@ public class CertificateRequest {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+
+    public java.time.LocalDate getBirthDate() { return birthDate; }
+    public void setBirthDate(java.time.LocalDate birthDate) { this.birthDate = birthDate; }
+
+    public String getBirthPlace() { return birthPlace; }
+    public void setBirthPlace(String birthPlace) { this.birthPlace = birthPlace; }
+
+    public String getNationality() { return nationality; }
+    public void setNationality(String nationality) { this.nationality = nationality; }
+
+    public String getIdentityDocumentType() { return identityDocumentType; }
+    public void setIdentityDocumentType(String identityDocumentType) { this.identityDocumentType = identityDocumentType; }
+
+    public String getIdentityDocumentNumber() { return identityDocumentNumber; }
+    public void setIdentityDocumentNumber(String identityDocumentNumber) { this.identityDocumentNumber = identityDocumentNumber; }
+
+    public java.time.LocalDate getIdentityDocumentExpiry() { return identityDocumentExpiry; }
+    public void setIdentityDocumentExpiry(java.time.LocalDate identityDocumentExpiry) { this.identityDocumentExpiry = identityDocumentExpiry; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
