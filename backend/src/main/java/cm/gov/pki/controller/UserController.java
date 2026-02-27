@@ -155,12 +155,21 @@ public class UserController {
         req.setSubmittedAt(LocalDateTime.now());
         req = certificateRequestRepository.save(req);
 
-        String savedDocs = saveDocuments(req.getId(), documents, req.getIdentityDocumentType());
-        if (savedDocs == null) {
+        String savedDocs;
+        try {
+            savedDocs = saveDocuments(req.getId(), documents, req.getIdentityDocumentType());
+        } catch (IllegalArgumentException iae) {
             try {
                 certificateRequestRepository.delete(req);
             } catch (Exception ex) {
                 log.warn("Failed to rollback request {}", req.getId(), ex);
+            }
+            return ResponseEntity.status(400).body(Map.of("error", iae.getMessage()));
+        } catch (Exception ex) {
+            try {
+                certificateRequestRepository.delete(req);
+            } catch (Exception rollbackEx) {
+                log.warn("Failed to rollback request {}", req.getId(), rollbackEx);
             }
             return ResponseEntity.status(500).body(Map.of("error", "Erreur lors de l'enregistrement des fichiers"));
         }
@@ -233,8 +242,12 @@ public class UserController {
         }
 
         if (documents != null && documents.length > 0) {
-            String savedDocs = saveDocuments(req.getId(), documents, req.getIdentityDocumentType());
-            if (savedDocs == null) {
+            String savedDocs;
+            try {
+                savedDocs = saveDocuments(req.getId(), documents, req.getIdentityDocumentType());
+            } catch (IllegalArgumentException iae) {
+                return ResponseEntity.status(400).body(Map.of("error", iae.getMessage()));
+            } catch (Exception ex) {
                 return ResponseEntity.status(500).body(Map.of("error", "Erreur lors de l'enregistrement des fichiers"));
             }
             req.setDocuments(savedDocs);
@@ -508,23 +521,23 @@ public class UserController {
 
     private String saveDocuments(UUID requestId, MultipartFile[] documents, String expectedIdentityType) {
         if (documents == null || documents.length == 0) return "";
-        try {
-            List<String> invalid = new ArrayList<>();
-            for (MultipartFile f : documents) {
-                if (f == null || f.isEmpty()) continue;
-                String ct = f.getContentType();
-                if (ct == null || !ALLOWED_TYPES.contains(ct.toLowerCase()) || f.getSize() > MAX_FILE_SIZE) {
-                    invalid.add(f.getOriginalFilename() == null ? "file" : f.getOriginalFilename());
-                    continue;
-                }
-                if (!looksLikeIdentityDocument(f, expectedIdentityType)) {
-                    invalid.add((f.getOriginalFilename() == null ? "file" : f.getOriginalFilename()) + " (piece non reconnue)");
-                }
+        List<String> invalid = new ArrayList<>();
+        for (MultipartFile f : documents) {
+            if (f == null || f.isEmpty()) continue;
+            String ct = f.getContentType();
+            if (ct == null || !ALLOWED_TYPES.contains(ct.toLowerCase()) || f.getSize() > MAX_FILE_SIZE) {
+                invalid.add(f.getOriginalFilename() == null ? "file" : f.getOriginalFilename());
+                continue;
             }
-            if (!invalid.isEmpty()) {
-                throw new IllegalArgumentException("Seules les pieces d'identite CNI/Passeport sont acceptees. Fichiers non valides: " + String.join(",", invalid));
+            if (!looksLikeIdentityDocument(f, expectedIdentityType)) {
+                invalid.add((f.getOriginalFilename() == null ? "file" : f.getOriginalFilename()) + " (piece non reconnue)");
             }
+        }
+        if (!invalid.isEmpty()) {
+            throw new IllegalArgumentException("Seules les pieces d'identite CNI/Passeport sont acceptees. Fichiers non valides: " + String.join(",", invalid));
+        }
 
+        try {
             Path base = uploadRoot().resolve(Paths.get("certificate_requests", requestId.toString()));
             Files.createDirectories(base);
             List<String> saved = new ArrayList<>();
@@ -541,12 +554,9 @@ public class UserController {
                 saved.add(safeName);
             }
             return String.join(",", saved);
-        } catch (IllegalArgumentException ex) {
-            log.warn("Invalid document upload for request {}: {}", requestId, ex.getMessage());
-            return null;
         } catch (Exception ex) {
             log.error("Error saving documents for request {}", requestId, ex);
-            return null;
+            throw new RuntimeException("Erreur technique lors de l'enregistrement des fichiers", ex);
         }
     }
 
