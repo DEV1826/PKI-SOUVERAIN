@@ -94,6 +94,9 @@ pki:
     local:
       url: ${PKI_ID_AI_LOCAL_URL:http://localhost:8000/validate}
       api-key: ${PKI_ID_AI_LOCAL_API_KEY:}
+      retries: ${PKI_ID_AI_LOCAL_RETRIES:3}
+      retry-delay-ms: ${PKI_ID_AI_LOCAL_RETRY_DELAY_MS:1500}
+      warmup-enabled: ${PKI_ID_AI_LOCAL_WARMUP_ENABLED:true}
 
 # Actuator (Monitoring)
 management:

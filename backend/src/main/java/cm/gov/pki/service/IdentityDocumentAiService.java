@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.LinkedMultiValueMap;
@@ -20,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 @Service
 public class IdentityDocumentAiService {
@@ -41,7 +44,16 @@ public class IdentityDocumentAiService {
     @Value("${pki.identity-ai.local.api-key:}")
     private String localApiKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Value("${pki.identity-ai.local.retries:3}")
+    private int localRetries;
+
+    @Value("${pki.identity-ai.local.retry-delay-ms:1500}")
+    private long localRetryDelayMs;
+
+    @Value("${pki.identity-ai.local.warmup-enabled:true}")
+    private boolean localWarmupEnabled;
+
+    private final RestTemplate restTemplate = buildRestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ValidationResult validateIdentityDocument(MultipartFile file, String expectedType) {
@@ -74,6 +86,26 @@ public class IdentityDocumentAiService {
     }
 
     private ValidationResult validateWithLocalService(MultipartFile file, String expectedType) throws Exception {
+        Exception lastException = null;
+        int attempts = Math.max(1, localRetries);
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            try {
+                if (localWarmupEnabled) {
+                    warmupLocalService();
+                }
+                return doLocalValidate(file, expectedType);
+            } catch (Exception ex) {
+                lastException = ex;
+                if (attempt < attempts) {
+                    log.warn("Local AI attempt {}/{} failed: {}", attempt, attempts, ex.getMessage());
+                    sleepSilently(localRetryDelayMs);
+                }
+            }
+        }
+        throw lastException != null ? lastException : new IllegalStateException("Local AI validation failed");
+    }
+
+    private ValidationResult doLocalValidate(MultipartFile file, String expectedType) throws Exception {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         if (localApiKey != null && !localApiKey.isBlank()) {
@@ -101,6 +133,45 @@ public class IdentityDocumentAiService {
         double confidence = root.path("confidence").asDouble(0.0);
         String message = root.path("message").asText("Local AI response");
         return new ValidationResult(accepted, confidence, message);
+    }
+
+    private void warmupLocalService() {
+        String healthUrl = deriveHealthUrl(localUrl);
+        if (healthUrl == null) return;
+        try {
+            restTemplate.getForEntity(healthUrl, String.class);
+        } catch (Exception ex) {
+            log.debug("Local AI warmup failed: {}", ex.getMessage());
+        }
+    }
+
+    private static String deriveHealthUrl(String validateUrl) {
+        if (validateUrl == null || validateUrl.isBlank()) return null;
+        try {
+            URI uri = new URI(validateUrl);
+            String path = uri.getPath() == null ? "" : uri.getPath();
+            String healthPath = path.endsWith("/validate") ? path.substring(0, path.length() - "/validate".length()) + "/health" : "/health";
+            URI healthUri = new URI(uri.getScheme(), uri.getAuthority(), healthPath, null, null);
+            return healthUri.toString();
+        } catch (URISyntaxException ignored) {
+            return null;
+        }
+    }
+
+    private static RestTemplate buildRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(6000);
+        factory.setReadTimeout(12000);
+        return new RestTemplate(factory);
+    }
+
+    private void sleepSilently(long millis) {
+        if (millis <= 0) return;
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private String extractText(MultipartFile file) {
