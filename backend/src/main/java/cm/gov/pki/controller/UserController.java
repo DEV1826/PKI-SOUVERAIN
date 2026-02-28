@@ -528,20 +528,12 @@ public class UserController {
         List<String> invalid = new ArrayList<>();
         for (MultipartFile f : documents) {
             if (f == null || f.isEmpty()) continue;
-            String ct = f.getContentType();
-            if (ct == null || !ALLOWED_TYPES.contains(ct.toLowerCase()) || f.getSize() > MAX_FILE_SIZE) {
+            if (f.getSize() > MAX_FILE_SIZE) {
                 invalid.add(f.getOriginalFilename() == null ? "file" : f.getOriginalFilename());
-                continue;
-            }
-            var validation = identityDocumentAiService.validateIdentityDocument(f, expectedIdentityType);
-            if (!validation.accepted()) {
-                invalid.add((f.getOriginalFilename() == null ? "file" : f.getOriginalFilename()) + " (" + validation.message() + ")");
-            } else if (validation.confidence() < 0.45) {
-                log.warn("Low AI confidence for request {} file {}: {}", requestId, f.getOriginalFilename(), validation.message());
             }
         }
         if (!invalid.isEmpty()) {
-            throw new IllegalArgumentException("Seules les pieces d'identite CNI/Passeport sont acceptees. Fichiers non valides: " + String.join(",", invalid));
+            throw new IllegalArgumentException("Fichiers trop volumineux (>100MB): " + String.join(",", invalid));
         }
 
         try {
