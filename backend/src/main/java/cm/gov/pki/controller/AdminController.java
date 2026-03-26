@@ -355,7 +355,27 @@ public class AdminController {
 		if (req.getCsrContent() == null || req.getCsrContent().isBlank()) {
 			return ResponseEntity.status(400).body(java.util.Map.of("error", "No CSR provided for this request"));
 		}
-		String certPem = caService.signCSR(req.getCsrContent(), validityDays, req.getUser().getId(), req.getId());
+		final String certPem;
+		try {
+			certPem = caService.signCSR(req.getCsrContent(), validityDays, req.getUser().getId(), req.getId());
+		} catch (RuntimeException ex) {
+			String msg = ex.getMessage() == null ? "" : ex.getMessage();
+			log.warn("CSR signing failed for request {}: {}", id, msg);
+			if (msg.contains("Aucune AC active trouvée")
+					|| msg.contains("ca-store")
+					|| msg.contains(".pem")
+					|| msg.contains("CA")
+					|| msg.contains("AC")) {
+				return ResponseEntity.status(400).body(java.util.Map.of(
+						"error",
+						"Impossible de signer la CSR: AC absente ou non configuree. Veuillez initialiser ou reinitialiser l AC."
+				));
+			}
+			return ResponseEntity.status(400).body(java.util.Map.of(
+					"error",
+					"Impossible de signer la CSR pour le moment. Veuillez reessayer."
+			));
+		}
 		
 		// Générer un token de validation
 		String validationToken = java.util.UUID.randomUUID().toString();

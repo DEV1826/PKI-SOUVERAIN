@@ -173,11 +173,23 @@ public class CAService {
             CAConfiguration ca = caConfigurationRepository.findFirstByIsActiveTrueOrderByCreatedAtDesc()
                     .orElseThrow(() -> new RuntimeException("Aucune AC active trouvée"));
 
+            if (ca.caCertPath == null || ca.caCertPath.isBlank() || ca.caKeyPath == null || ca.caKeyPath.isBlank()) {
+                throw new RuntimeException("AC non configuree: chemins certificat/cle manquants");
+            }
+
             // Load CA private key (from PEM or PKCS12 keystore)
             PrivateKey caPrivateKey = loadPrivateKeyForCA(ca);
 
+            if (caPrivateKey == null) {
+                throw new RuntimeException("AC non configuree: cle privee introuvable");
+            }
+
             // Read CA cert
             Path certPath = Path.of(ca.caCertPath);
+
+            if (!Files.exists(certPath)) {
+                throw new RuntimeException("AC non configuree: certificat introuvable");
+            }
             X509Certificate caCert;
             try (PEMParser p = new PEMParser(Files.newBufferedReader(certPath))) {
                 X509CertificateHolder holder = (X509CertificateHolder) p.readObject();
@@ -272,6 +284,10 @@ public class CAService {
         try {
             Path keyPath = Path.of(ca.caKeyPath);
             Path certPath = Path.of(ca.caCertPath);
+
+            if (!Files.exists(certPath)) {
+                throw new RuntimeException("AC non configuree: certificat introuvable");
+            }
             // Load key and cert
             Object keyObj;
             try (PEMParser p = new PEMParser(Files.newBufferedReader(keyPath))) {
@@ -678,4 +694,5 @@ public class CAService {
         }
     }
 }
+
 
