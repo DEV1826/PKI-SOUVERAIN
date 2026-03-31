@@ -8,6 +8,7 @@ import cm.gov.pki.repository.CAConfigurationRepository;
 import cm.gov.pki.repository.CertificateRepository;
 import cm.gov.pki.repository.CertificateRequestRepository;
 import cm.gov.pki.service.CAService;
+import cm.gov.pki.service.AuditService;
 import cm.gov.pki.service.IdentityDocumentAiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +61,7 @@ public class UserController {
     private final CAService caService;
     private final IdentityDocumentAiService identityDocumentAiService;
     private final CAConfigurationRepository caConfigurationRepository;
+    private final AuditService auditService;
 
     @Autowired
     public UserController(
@@ -67,13 +69,15 @@ public class UserController {
             CertificateRequestRepository certificateRequestRepository,
             CAService caService,
             IdentityDocumentAiService identityDocumentAiService,
-            CAConfigurationRepository caConfigurationRepository
+            CAConfigurationRepository caConfigurationRepository,
+            AuditService auditService
     ) {
         this.certificateRepository = certificateRepository;
         this.certificateRequestRepository = certificateRequestRepository;
         this.caService = caService;
         this.identityDocumentAiService = identityDocumentAiService;
         this.caConfigurationRepository = caConfigurationRepository;
+        this.auditService = auditService;
     }
 
     @GetMapping("/me")
@@ -185,6 +189,8 @@ public class UserController {
         req.setNotes(savedDocs);
         req = certificateRequestRepository.save(req);
 
+        auditService.log(user, cm.gov.pki.entity.AuditLog.Actions.REQUEST_SUBMITTED, "CertificateRequest", req.getId(), null);
+
         return ResponseEntity.ok(Map.of(
                 "requestId", req.getId().toString(),
                 "status", req.getStatus(),
@@ -268,6 +274,8 @@ public class UserController {
         req.setReviewedBy(null);
         req.setSubmittedAt(LocalDateTime.now());
         req = certificateRequestRepository.save(req);
+
+        auditService.log(user, cm.gov.pki.entity.AuditLog.Actions.REQUEST_UPDATED, "CertificateRequest", req.getId(), null);
 
         return ResponseEntity.ok(Map.of("requestId", req.getId().toString(), "status", req.getStatus()));
     }
@@ -374,6 +382,9 @@ public class UserController {
         req.setStatus("CSR_SUBMITTED");
         req.setSubmittedAt(LocalDateTime.now());
         req = certificateRequestRepository.save(req);
+        if (req.getUser() != null) {
+            auditService.log(req.getUser(), cm.gov.pki.entity.AuditLog.Actions.CSR_SUBMITTED, "CertificateRequest", req.getId(), null);
+        }
         return ResponseEntity.ok(Map.of("requestId", req.getId().toString(), "status", req.getStatus()));
     }
 
@@ -463,6 +474,8 @@ public class UserController {
         if (cert.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Certificate not found"));
         Certificate certificate = cert.get();
 
+        auditService.log(user, cm.gov.pki.entity.AuditLog.Actions.TOKEN_VALIDATED, "Certificate", certificate.getId(), null);
+
         return ResponseEntity.ok(Map.of(
                 "certificateId", certificate.getId().toString(),
                 "certificate", certificate.getCertificatePem(),
@@ -528,7 +541,74 @@ public class UserController {
             return ResponseEntity.status(400).body(Map.of("error", "Certificate already revoked"));
         }
         caService.revokeCertificate(certificateId, reason == null ? "revocation_requested_by_user" : reason, user);
+        auditService.log(user, cm.gov.pki.entity.AuditLog.Actions.CERTIFICATE_REVOKED, "Certificate", certificateId,
+                Map.of("reason", reason));
         return ResponseEntity.ok(Map.of("status", "revoked"));
+    }
+
+    @PostMapping("/certificates/{certificateId}/renew")
+    public ResponseEntity<?> renewCertificate(
+            Authentication authentication,
+            @PathVariable("certificateId") UUID certificateId) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = (User) authentication.getPrincipal();
+        var certOpt = certificateRepository.findById(certificateId);
+        if (certOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Certificate not found"));
+        Certificate cert = certOpt.get();
+        if (!cert.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Unauthorized"));
+        }
+
+        CertificateRequest req = new CertificateRequest();
+        req.setUser(user);
+        req.setEmail(user.getEmail());
+        req.setFirstName(user.getFirstName());
+        req.setLastName(user.getLastName());
+        req.setStatus("PENDING_REVIEW");
+        req.setSubmittedAt(LocalDateTime.now());
+        req.setNotes("RENEWAL_OF:" + certificateId);
+        req.setDocuments("");
+
+        if (cert.getRequest() != null) {
+            CertificateRequest prev = cert.getRequest();
+            req.setCommonName(prev.getCommonName());
+            req.setOrganization(prev.getOrganization());
+            req.setOrganizationalUnit(prev.getOrganizationalUnit());
+            req.setLocality(prev.getLocality());
+            req.setState(prev.getState());
+            req.setCountry(prev.getCountry());
+            req.setBirthDate(prev.getBirthDate());
+            req.setBirthPlace(prev.getBirthPlace());
+            req.setNationality(prev.getNationality());
+            req.setIdentityDocumentType(prev.getIdentityDocumentType());
+            req.setIdentityDocumentNumber(prev.getIdentityDocumentNumber());
+            req.setIdentityDocumentExpiry(prev.getIdentityDocumentExpiry());
+        } else {
+            String subject = cert.getSubjectDN();
+            req.setCommonName(getDnValue(subject, "CN"));
+            req.setOrganization(getDnValue(subject, "O"));
+            req.setOrganizationalUnit(getDnValue(subject, "OU"));
+            req.setLocality(getDnValue(subject, "L"));
+            req.setState(getDnValue(subject, "ST"));
+            req.setCountry(getDnValue(subject, "C"));
+        }
+
+        String validationError = validateBaseRequest(req);
+        if (validationError != null) {
+            return ResponseEntity.status(400).body(Map.of("error", validationError));
+        }
+
+        req = certificateRequestRepository.save(req);
+        auditService.log(user, cm.gov.pki.entity.AuditLog.Actions.CERTIFICATE_RENEWED, "CertificateRequest", req.getId(),
+                Map.of("renewalOf", certificateId.toString()));
+
+        return ResponseEntity.ok(Map.of(
+                "requestId", req.getId().toString(),
+                "status", req.getStatus(),
+                "message", "Demande de renouvellement creee"
+        ));
     }
 
     @GetMapping("/crl")
@@ -550,6 +630,18 @@ public class UserController {
         if (req.getLocality() == null || req.getLocality().isBlank()) return "Ville (L) est requise";
         if (req.getCountry() == null || !req.getCountry().matches("^[A-Za-z]{2}$")) return "Pays (C) doit etre un code ISO 2 lettres";
         if (req.getEmail() == null || !req.getEmail().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) return "Email invalide";
+        return null;
+    }
+
+    private String getDnValue(String subject, String key) {
+        if (subject == null || subject.isBlank()) return null;
+        String[] parts = subject.split(",");
+        for (String p : parts) {
+            String trimmed = p.trim();
+            if (trimmed.startsWith(key + "=")) {
+                return trimmed.substring((key + "=").length()).trim();
+            }
+        }
         return null;
     }
 
@@ -660,6 +752,7 @@ public class UserController {
         private String submittedAt;
         private String rejectionReason;
         private String[] documents;
+        private String notes;
 
         public CertificateRequestDTO() {}
 
@@ -684,6 +777,7 @@ public class UserController {
             this.submittedAt = r.getSubmittedAt() != null ? r.getSubmittedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
             this.rejectionReason = r.getRejectionReason();
             this.documents = r.getDocuments() != null && !r.getDocuments().isBlank() ? r.getDocuments().split(",") : new String[0];
+            this.notes = r.getNotes();
         }
 
         public String getId() { return id; }
@@ -726,5 +820,7 @@ public class UserController {
         public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
         public String[] getDocuments() { return documents; }
         public void setDocuments(String[] documents) { this.documents = documents; }
+        public String getNotes() { return notes; }
+        public void setNotes(String notes) { this.notes = notes; }
     }
 }

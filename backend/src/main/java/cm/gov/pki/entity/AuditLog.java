@@ -134,6 +134,8 @@ public class AuditLog {
         public static final String USER_LOGOUT = "USER_LOGOUT";
         public static final String USER_REGISTER = "USER_REGISTER";
         public static final String CA_INITIALIZED = "CA_INITIALIZED";
+        public static final String REQUEST_SUBMITTED = "REQUEST_SUBMITTED";
+        public static final String REQUEST_UPDATED = "REQUEST_UPDATED";
         public static final String CSR_SUBMITTED = "CSR_SUBMITTED";
         public static final String CSR_APPROVED = "CSR_APPROVED";
         public static final String CSR_REJECTED = "CSR_REJECTED";
@@ -141,5 +143,7 @@ public class AuditLog {
         public static final String CERTIFICATE_ISSUED = "CERTIFICATE_ISSUED";
         public static final String CERTIFICATE_REVOKED = "CERTIFICATE_REVOKED";
         public static final String CRL_PUBLISHED = "CRL_PUBLISHED";
+        public static final String CERTIFICATE_EXPIRING_SOON = "CERTIFICATE_EXPIRING_SOON";
+        public static final String CERTIFICATE_RENEWED = "CERTIFICATE_RENEWED";
     }
 }

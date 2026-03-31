@@ -259,6 +259,7 @@ public class CAService {
                     certEntity.setNotBefore(LocalDateTime.ofInstant(notBefore.toInstant(), ZoneId.systemDefault()));
                     certEntity.setNotAfter(LocalDateTime.ofInstant(notAfter.toInstant(), ZoneId.systemDefault()));
                     certEntity.setStatus(Certificate.CertificateStatus.ACTIVE);
+                    certEntity.setIssuedAt(LocalDateTime.now());
 
                     if (requestId != null) {
                         certificateRequestRepository.findById(requestId).ifPresent(certEntity::setRequest);

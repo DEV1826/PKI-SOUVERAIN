@@ -14,7 +14,9 @@ import java.util.UUID;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     Page<AuditLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    Page<AuditLog> findByActionOrderByCreatedAtDesc(String action, Pageable pageable);
     List<AuditLog> findByUserOrderByCreatedAtDesc(User user);
     List<AuditLog> findByActionOrderByCreatedAtDesc(String action);
     List<AuditLog> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime start, LocalDateTime end);
+    boolean existsByActionAndEntityId(String action, UUID entityId);
 }

@@ -230,4 +230,36 @@ public class EmailService {
             log.error("Erreur lors de l'envoi de l'email de confirmation Ã  {}: {}", toEmail, e.getMessage(), e);
         }
     }
+
+    /**
+     * Envoie un email d'alerte avant expiration de certificat
+     */
+    public void sendCertificateExpiryEmail(String toEmail, String userName, String certificateId, String expiresAt) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Alerte expiration certificat");
+
+            String messageBody = String.format(
+                "Bonjour %s,\n\n" +
+                "Votre certificat numerique (%s) arrive bientot a expiration.\n\n" +
+                "Date d'expiration : %s\n\n" +
+                "Nous vous recommandons de lancer un renouvellement des que possible.\n\n" +
+                "Cordialement,\n" +
+                "Autorite de Certification Souveraine",
+                userName,
+                certificateId,
+                expiresAt
+            );
+
+            message.setText(messageBody);
+            boolean sent = sendOrLog(message);
+            if (!debugMode && sent) {
+                log.info("Email d'expiration envoye a: {}", toEmail);
+            }
+        } catch (Exception e) {
+            log.error("Erreur lors de l'envoi de l'alerte expiration a {}: {}", toEmail, e.getMessage(), e);
+        }
+    }
 }

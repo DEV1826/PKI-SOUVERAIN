@@ -6,7 +6,9 @@ import cm.gov.pki.repository.CAConfigurationRepository;
 import cm.gov.pki.repository.CertificateRepository;
 import cm.gov.pki.repository.CertificateRequestRepository;
 import cm.gov.pki.repository.UserRepository;
+import cm.gov.pki.repository.AuditLogRepository;
 import cm.gov.pki.service.CAService;
+import cm.gov.pki.service.AuditService;
 import cm.gov.pki.service.EmailService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +31,8 @@ public class AdminController {
 		private final CertificateRequestRepository certificateRequestRepository;
 		private final CAService caService;
 		private final EmailService emailService;
+		private final AuditService auditService;
+		private final AuditLogRepository auditLogRepository;
 
 		private java.nio.file.Path uploadRoot() {
 			String configured = System.getenv("PKI_UPLOAD_DIR");
@@ -43,13 +47,17 @@ public class AdminController {
 						   CertificateRepository certificateRepository,
 						   CertificateRequestRepository certificateRequestRepository,
 						   CAService caService,
-						   EmailService emailService) {
+						   EmailService emailService,
+						   AuditService auditService,
+						   AuditLogRepository auditLogRepository) {
 		this.caConfigurationRepository = caConfigurationRepository;
 		this.userRepository = userRepository;
 		this.certificateRepository = certificateRepository;
 		this.certificateRequestRepository = certificateRequestRepository;
 		this.caService = caService;
 		this.emailService = emailService;
+		this.auditService = auditService;
+		this.auditLogRepository = auditLogRepository;
 	}
 
 	@GetMapping({"/ca-status", "/ca/status"})
@@ -137,6 +145,12 @@ public class AdminController {
 													   @RequestParam(value = "validityDays", defaultValue = "365") int validityDays,
 													   @RequestParam(value = "userId", required = false) java.util.UUID userId) {
 		String certPem = caService.signCSR(csrPem, validityDays, userId);
+		if (userId != null) {
+			userRepository.findById(userId).ifPresent(user ->
+				auditService.log(user, cm.gov.pki.entity.AuditLog.Actions.CERTIFICATE_ISSUED, "Certificate", null,
+					java.util.Map.of("validityDays", validityDays))
+			);
+		}
 		Map<String, String> resp = new HashMap<>();
 		resp.put("certificate", certPem);
 		return ResponseEntity.ok(resp);
@@ -176,6 +190,7 @@ public class AdminController {
 		CAConfiguration ca = caConfigurationRepository.findFirstByIsActiveTrueOrderByCreatedAtDesc()
 				.orElseThrow(() -> new RuntimeException("No active CA found"));
 		String crlPem = caService.generateCRL(ca);
+		auditService.logSystem(cm.gov.pki.entity.AuditLog.Actions.CRL_PUBLISHED, "CAConfiguration", ca.id, java.util.Map.of("type", "generate"));
 		Map<String, String> resp = new HashMap<>();
 		resp.put("crl", crlPem);
 		return ResponseEntity.ok(resp);
@@ -193,8 +208,10 @@ public class AdminController {
 				.orElseThrow(() -> new RuntimeException("No admin user found"));
 		}
 		caService.revokeCertificate(certId, reason == null ? "unspecified" : reason, admin);
+		auditService.log(admin, cm.gov.pki.entity.AuditLog.Actions.CERTIFICATE_REVOKED, "Certificate", certId, java.util.Map.of("reason", reason));
 		CAConfiguration ca = caConfigurationRepository.findFirstByIsActiveTrueOrderByCreatedAtDesc()
 				.orElseThrow(() -> new RuntimeException("No active CA found"));
+		auditService.logSystem(cm.gov.pki.entity.AuditLog.Actions.CRL_PUBLISHED, "CAConfiguration", ca.id, java.util.Map.of("type", "revoke"));
 		Map<String, String> resp = new HashMap<>();
 		resp.put("crlPath", ca.caCrlPath);
 		return ResponseEntity.ok(resp);
@@ -224,6 +241,7 @@ public class AdminController {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+		auditService.logSystem(cm.gov.pki.entity.AuditLog.Actions.CRL_PUBLISHED, "CAConfiguration", ca.id, java.util.Map.of("type", "rotate"));
 		Map<String, String> resp = new HashMap<>();
 		resp.put("crlPath", crlPath.toAbsolutePath().toString());
 		return ResponseEntity.ok(resp);
@@ -261,6 +279,32 @@ public class AdminController {
 		resp.put("page", certPage.getNumber());
 		resp.put("size", certPage.getSize());
 		resp.put("totalPages", certPage.getTotalPages());
+		return ResponseEntity.ok(resp);
+	}
+
+	@GetMapping("/audit-logs")
+	public ResponseEntity<?> listAuditLogs(
+			@RequestParam(value = "action", required = false) String action,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "20") int size) {
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+				Math.max(0, page),
+				Math.max(1, size),
+				org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")
+		);
+		org.springframework.data.domain.Page<cm.gov.pki.entity.AuditLog> logPage;
+		if (action != null && !action.isBlank()) {
+			logPage = auditLogRepository.findByActionOrderByCreatedAtDesc(action, pageable);
+		} else {
+			logPage = auditLogRepository.findAllByOrderByCreatedAtDesc(pageable);
+		}
+		var items = logPage.getContent().stream().map(AdminAuditLogDTO::new).toList();
+		java.util.Map<String, Object> resp = new java.util.HashMap<>();
+		resp.put("items", items);
+		resp.put("total", logPage.getTotalElements());
+		resp.put("page", logPage.getNumber());
+		resp.put("size", logPage.getSize());
+		resp.put("totalPages", logPage.getTotalPages());
 		return ResponseEntity.ok(resp);
 	}
 
@@ -347,6 +391,7 @@ public class AdminController {
 		req.setReviewedBy(admin);
 		req.setRejectionReason(null);
 		certificateRequestRepository.save(req);
+		auditService.log(admin, cm.gov.pki.entity.AuditLog.Actions.CSR_APPROVED, "CertificateRequest", req.getId(), null);
 		return ResponseEntity.ok(java.util.Map.of("status", req.getStatus()));
 	}
 
@@ -371,6 +416,8 @@ public class AdminController {
 		req.setReviewedAt(java.time.LocalDateTime.now());
 		req.setReviewedBy(admin);
 		certificateRequestRepository.save(req);
+		auditService.log(admin, cm.gov.pki.entity.AuditLog.Actions.CSR_REJECTED, "CertificateRequest", req.getId(),
+				java.util.Map.of("reason", req.getRejectionReason()));
 		return ResponseEntity.ok(java.util.Map.of("status", req.getStatus(), "reason", req.getRejectionReason()));
 	}
 
@@ -422,6 +469,8 @@ public class AdminController {
 		req.setValidationToken(validationToken);
 		req.setTokenExpiresAt(tokenExpiresAt);
 		certificateRequestRepository.save(req);
+		auditService.log(admin, cm.gov.pki.entity.AuditLog.Actions.CERTIFICATE_ISSUED, "CertificateRequest", req.getId(),
+				java.util.Map.of("validityDays", validityDays));
 		
 		// Envoyer email avec le token
 		String userName = req.getUser().getFirstName() + " " + req.getUser().getLastName();
@@ -448,6 +497,8 @@ public class AdminController {
 		req.setReviewedAt(java.time.LocalDateTime.now());
 		req.setReviewedBy(admin);
 		certificateRequestRepository.save(req);
+		auditService.log(admin, cm.gov.pki.entity.AuditLog.Actions.CSR_REJECTED, "CertificateRequest", req.getId(),
+				java.util.Map.of("reason", req.getRejectionReason()));
 		
 		// Envoyer email de rejet
 		String userName = req.getUser().getFirstName() + " " + req.getUser().getLastName();
@@ -653,6 +704,26 @@ public class AdminController {
 			this.notAfter = c.getNotAfter() != null ? c.getNotAfter().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
 			this.revokedAt = c.getRevokedAt() != null ? c.getRevokedAt().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
 			this.revocationReason = c.getRevocationReason();
+		}
+	}
+
+	public static class AdminAuditLogDTO {
+		public String id;
+		public String userEmail;
+		public String action;
+		public String entityType;
+		public String entityId;
+		public Object details;
+		public String createdAt;
+
+		public AdminAuditLogDTO(cm.gov.pki.entity.AuditLog log) {
+			this.id = log.getId() != null ? log.getId().toString() : null;
+			this.userEmail = log.getUser() != null ? log.getUser().getEmail() : null;
+			this.action = log.getAction();
+			this.entityType = log.getEntityType();
+			this.entityId = log.getEntityId() != null ? log.getEntityId().toString() : null;
+			this.details = log.getDetails();
+			this.createdAt = log.getCreatedAt() != null ? log.getCreatedAt().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
 		}
 	}
 }
