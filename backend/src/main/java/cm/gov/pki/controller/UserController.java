@@ -4,6 +4,7 @@ import cm.gov.pki.dto.AuthDTO;
 import cm.gov.pki.entity.Certificate;
 import cm.gov.pki.entity.CertificateRequest;
 import cm.gov.pki.entity.User;
+import cm.gov.pki.repository.CAConfigurationRepository;
 import cm.gov.pki.repository.CertificateRepository;
 import cm.gov.pki.repository.CertificateRequestRepository;
 import cm.gov.pki.service.CAService;
@@ -58,18 +59,21 @@ public class UserController {
     private final CertificateRequestRepository certificateRequestRepository;
     private final CAService caService;
     private final IdentityDocumentAiService identityDocumentAiService;
+    private final CAConfigurationRepository caConfigurationRepository;
 
     @Autowired
     public UserController(
             CertificateRepository certificateRepository,
             CertificateRequestRepository certificateRequestRepository,
             CAService caService,
-            IdentityDocumentAiService identityDocumentAiService
+            IdentityDocumentAiService identityDocumentAiService,
+            CAConfigurationRepository caConfigurationRepository
     ) {
         this.certificateRepository = certificateRepository;
         this.certificateRequestRepository = certificateRequestRepository;
         this.caService = caService;
         this.identityDocumentAiService = identityDocumentAiService;
+        this.caConfigurationRepository = caConfigurationRepository;
     }
 
     @GetMapping("/me")
@@ -503,6 +507,41 @@ public class UserController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(contentBytes.length))
                 .body(contentBytes);
+    }
+
+    @PostMapping("/certificates/{certificateId}/revoke")
+    public ResponseEntity<?> revokeCertificate(
+            Authentication authentication,
+            @PathVariable("certificateId") UUID certificateId,
+            @RequestParam(value = "reason", required = false) String reason) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = (User) authentication.getPrincipal();
+        var certOpt = certificateRepository.findById(certificateId);
+        if (certOpt.isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Certificate not found"));
+        Certificate certificate = certOpt.get();
+        if (!certificate.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Unauthorized"));
+        }
+        if (certificate.getStatus() == Certificate.CertificateStatus.REVOKED) {
+            return ResponseEntity.status(400).body(Map.of("error", "Certificate already revoked"));
+        }
+        caService.revokeCertificate(certificateId, reason == null ? "revocation_requested_by_user" : reason, user);
+        return ResponseEntity.ok(Map.of("status", "revoked"));
+    }
+
+    @GetMapping("/crl")
+    public ResponseEntity<?> downloadCrl() throws Exception {
+        var ca = caConfigurationRepository.findFirstByIsActiveTrueOrderByCreatedAtDesc()
+                .orElseThrow(() -> new RuntimeException("No active CA found"));
+        if (ca.caCrlPath == null) {
+            String crl = caService.generateCRL(ca);
+            return ResponseEntity.ok(crl);
+        }
+        java.nio.file.Path p = java.nio.file.Path.of(ca.caCrlPath);
+        String content = java.nio.file.Files.readString(p);
+        return ResponseEntity.ok(content);
     }
 
     private String validateBaseRequest(CertificateRequest req) {

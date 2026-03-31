@@ -229,6 +229,41 @@ public class AdminController {
 		return ResponseEntity.ok(resp);
 	}
 
+	@GetMapping("/certificates")
+	public ResponseEntity<?> listCertificates(
+			@RequestParam(value = "status", required = false) String status,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "20") int size) {
+
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+				Math.max(0, page),
+				Math.max(1, size),
+				org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "issuedAt")
+		);
+
+		org.springframework.data.domain.Page<cm.gov.pki.entity.Certificate> certPage;
+		if (status != null && !status.isBlank()) {
+			try {
+				cm.gov.pki.entity.Certificate.CertificateStatus st =
+						cm.gov.pki.entity.Certificate.CertificateStatus.valueOf(status.toUpperCase());
+				certPage = certificateRepository.findByStatus(st, pageable);
+			} catch (IllegalArgumentException ex) {
+				return ResponseEntity.status(400).body(java.util.Map.of("error", "Statut invalide"));
+			}
+		} else {
+			certPage = certificateRepository.findAll(pageable);
+		}
+
+		var items = certPage.getContent().stream().map(AdminCertificateDTO::new).toList();
+		java.util.Map<String, Object> resp = new java.util.HashMap<>();
+		resp.put("items", items);
+		resp.put("total", certPage.getTotalElements());
+		resp.put("page", certPage.getNumber());
+		resp.put("size", certPage.getSize());
+		resp.put("totalPages", certPage.getTotalPages());
+		return ResponseEntity.ok(resp);
+	}
+
 	// --- Certificate request management for admins ---
 
 	@GetMapping("/certificate-requests")
@@ -589,6 +624,35 @@ public class AdminController {
 			this.documents = r.getDocuments() != null ? r.getDocuments().split(",") : new String[0];
 			this.csrContent = r.getCsrContent();
 			this.notes = r.getNotes();
+		}
+	}
+
+	// DTO for admin certificate listing
+	public static class AdminCertificateDTO {
+		public String id;
+		public String userId;
+		public String userEmail;
+		public String serialNumber;
+		public String subjectDN;
+		public String issuerDN;
+		public String status;
+		public String issuedAt;
+		public String notAfter;
+		public String revokedAt;
+		public String revocationReason;
+
+		public AdminCertificateDTO(cm.gov.pki.entity.Certificate c) {
+			this.id = c.getId() != null ? c.getId().toString() : null;
+			this.userId = c.getUser() != null ? c.getUser().getId().toString() : null;
+			this.userEmail = c.getUser() != null ? c.getUser().getEmail() : null;
+			this.serialNumber = c.getSerialNumber();
+			this.subjectDN = c.getSubjectDN();
+			this.issuerDN = c.getIssuerDN();
+			this.status = c.getStatus() != null ? c.getStatus().name() : null;
+			this.issuedAt = c.getIssuedAt() != null ? c.getIssuedAt().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
+			this.notAfter = c.getNotAfter() != null ? c.getNotAfter().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
+			this.revokedAt = c.getRevokedAt() != null ? c.getRevokedAt().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null;
+			this.revocationReason = c.getRevocationReason();
 		}
 	}
 }
