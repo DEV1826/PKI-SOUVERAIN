@@ -1,12 +1,13 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 /**
  * Configuration de l'API client pour communiquer avec le backend
  */
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL_CLEAN = API_BASE_URL.replace(/\/+$/, '');
 
-// Instance Axios configurée
+// Instance Axios configurÃ©e
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -28,12 +29,12 @@ apiClient.interceptors.request.use(
   (error: any) => Promise.reject(error)
 );
 
-// Intercepteur pour gérer les erreurs 401 (token expiré)
+// Intercepteur pour gÃ©rer les erreurs 401 (token expirÃ©)
 apiClient.interceptors.response.use(
   (response: any) => response,
   async (error: any) => {
     if (error.response?.status === 401) {
-      // Token expiré : redirection vers login
+      // Token expirÃ© : redirection vers login
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       window.location.href = '/login';
@@ -43,7 +44,7 @@ apiClient.interceptors.response.use(
 );
 
 /**
- * Types de données
+ * Types de donnÃ©es
  */
 export interface User {
   id: string;
@@ -119,7 +120,7 @@ export const authService = {
   },
 
   /**
-   * Déconnexion
+   * DÃ©connexion
    */
   logout: () => {
     localStorage.removeItem('accessToken');
@@ -128,7 +129,7 @@ export const authService = {
   },
 
   /**
-   * Demande de réinitialisation de mot de passe
+   * Demande de rÃ©initialisation de mot de passe
    */
   forgotPassword: async (email: string): Promise<any> => {
     const response = await apiClient.post<any>('/auth/forgot-password', { email });
@@ -136,7 +137,7 @@ export const authService = {
   },
 
   /**
-   * Réinitialise le mot de passe
+   * RÃ©initialise le mot de passe
    */
   resetPassword: async (token: string, password: string): Promise<any> => {
     const response = await apiClient.post<any>('/auth/reset-password', { token, password });
@@ -157,14 +158,14 @@ export interface Certificate {
 
 export const userService = {
   /**
-   * Récupérer le profil de l'utilisateur connecté
+   * RÃ©cupÃ©rer le profil de l'utilisateur connectÃ©
    */
   getMe: async (): Promise<User> => {
     const response = await apiClient.get<User>('/user/me');
     return response.data;
   },
   /**
-   * Récupérer les certificats de l'utilisateur connecté
+   * RÃ©cupÃ©rer les certificats de l'utilisateur connectÃ©
    */
   getMyCertificates: async (): Promise<Certificate[]> => {
     const response = await apiClient.get<Certificate[]>('/user/certificates');
@@ -176,13 +177,14 @@ export const userService = {
    */
   submitCertificateRequest: async (form: FormData): Promise<any> => {
     const response = await apiClient.post('/user/certificate-requests', form, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
     });
     return response.data;
   },
 
   /**
-   * Récupérer les demandes de certificats de l'utilisateur
+   * RÃ©cupÃ©rer les demandes de certificats de l'utilisateur
    */
   getMyRequests: async (): Promise<any[]> => {
     const response = await apiClient.get<any[]>('/user/certificate-requests');
@@ -190,7 +192,7 @@ export const userService = {
   },
 
   /**
-   * Télécharger un certificat par ID
+   * TÃ©lÃ©charger un certificat par ID
    */
   downloadCertificate: async (certificateId: string, format: 'pem' | 'crt' = 'pem'): Promise<Blob> => {
     const response = await apiClient.get(`/user/certificates/${certificateId}/download`, {
@@ -199,11 +201,21 @@ export const userService = {
     });
     return response.data as Blob;
   },
+
+  /**
+   * Telecharger la CRL (utilisateur)
+   */
+  downloadCrl: async (): Promise<Blob> => {
+    const response = await apiClient.get(`/admin/crl`, {
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
 };
 
 export const adminService = {
   /**
-   * Récupérer le dashboard admin
+   * RÃ©cupÃ©rer le dashboard admin
    */
   getDashboard: async (): Promise<DashboardData> => {
     const response = await apiClient.get<DashboardData>('/admin/dashboard');
@@ -219,7 +231,7 @@ export const adminService = {
   },
 
   /**
-   * Récupérer le statut de l'AC
+   * RÃ©cupÃ©rer le statut de l'AC
    */
   getCAStatus: async (): Promise<CAStatus> => {
     const response = await apiClient.get<CAStatus>('/admin/ca/status');
@@ -245,8 +257,8 @@ export const adminService = {
   },
 
   downloadRequestDocument: (requestId: string, filename: string): string => {
-    // retourne simplement l'URL relative (synchroniquement) — pas de fetch requis
-    return `/api/admin/certificate-requests/${requestId}/documents/${encodeURIComponent(filename)}`;
+    // URL backend absolue pour fonctionner en production
+    return `${API_BASE_URL_CLEAN}/admin/certificate-requests/${requestId}/documents/${encodeURIComponent(filename)}`;
   },
 
   approveRequest: async (id: string, validityDays = 365): Promise<any> => {
@@ -256,6 +268,36 @@ export const adminService = {
 
   rejectRequest: async (id: string, reason?: string): Promise<any> => {
     const response = await apiClient.post(`/admin/certificate-requests/${id}/reject`, null, { params: { reason } });
+    return response.data;
+  },
+
+  /**
+   * CRL / Revocation / CA
+   */
+  generateCrl: async (): Promise<{ crlPem?: string; crlPath?: string }> => {
+    const response = await apiClient.post(`/admin/generate-crl`);
+    return response.data;
+  },
+
+  rotateCrl: async (): Promise<{ crlPem?: string; crlPath?: string }> => {
+    const response = await apiClient.post(`/admin/rotate-crl`);
+    return response.data;
+  },
+
+  downloadCrl: async (): Promise<Blob> => {
+    const response = await apiClient.get(`/admin/crl`, { responseType: 'blob' });
+    return response.data as Blob;
+  },
+
+  revokeCertificate: async (certId: string, reason?: string): Promise<any> => {
+    const response = await apiClient.post(`/admin/revoke/${certId}`, null, { params: { reason } });
+    return response.data;
+  },
+
+  generateIntermediateCa: async (name: string, keySize = 4096, validityDays = 3650): Promise<any> => {
+    const response = await apiClient.post(`/admin/generate-intermediate-ca`, null, {
+      params: { name, keySize, validityDays },
+    });
     return response.data;
   },
 
@@ -273,4 +315,6 @@ export const adminService = {
     return response.data;
   },
 };
+
+
 

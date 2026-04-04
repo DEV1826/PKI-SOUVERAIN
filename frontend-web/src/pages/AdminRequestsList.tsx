@@ -43,7 +43,7 @@ export default function AdminRequestsList() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-h4 font-bold dark:text-neutral-100">Demandes de certificats</h1>
         <div className="flex items-center gap-3">
           <label className="text-body-small dark:text-neutral-300">Filtrer :</label>
@@ -66,8 +66,8 @@ export default function AdminRequestsList() {
         <div className="text-red-600 dark:text-red-300">{error}</div>
       ) : (
         <div className="overflow-x-auto rounded border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-          <table className="w-full text-left">
-            <thead className="bg-neutral-50 text-sm text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-neutral-50 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
               <tr>
                 <th className="px-4 py-3">ID</th>
                 <th className="px-4 py-3">Utilisateur</th>
@@ -77,9 +77,9 @@ export default function AdminRequestsList() {
                 <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {requests.map((r) => (
-                <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                <tr key={r.id} className="transition-colors odd:bg-white even:bg-neutral-50/60 hover:bg-neutral-100/80 dark:odd:bg-neutral-900 dark:even:bg-neutral-900/70 dark:hover:bg-neutral-800/60">
                   <td className="px-4 py-3 font-mono text-xs dark:text-neutral-200">{r.id}</td>
                   <td className="px-4 py-3 dark:text-neutral-200">{r.userEmail || r.userId}</td>
                   <td className="px-4 py-3 dark:text-neutral-200">{r.commonName}</td>
@@ -101,7 +101,7 @@ export default function AdminRequestsList() {
 
               <tr className="border-t border-neutral-200 dark:border-neutral-800">
                 <td colSpan={6} className="px-4 py-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <label className="dark:text-neutral-300">Affichage</label>
                       <select

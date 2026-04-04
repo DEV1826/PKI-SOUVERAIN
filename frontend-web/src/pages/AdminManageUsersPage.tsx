@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
-import { Link } from 'react-router-dom';
-import { Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface User {
   id: string;
@@ -66,7 +66,7 @@ export default function AdminManageUsersPage() {
     setDeleting(true);
     try {
       await adminService.deleteUser(userToDelete.id);
-      addToast({ type: 'success', message: `Utilisateur ${userToDelete.email} supprimé avec succès` });
+      addToast({ type: 'success', message: `Utilisateur ${userToDelete.email} supprime avec succes` });
       setShowDeleteModal(false);
       setUserToDelete(null);
       loadUsers();
@@ -85,108 +85,107 @@ export default function AdminManageUsersPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
-      <header className="bg-white border-b p-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex justify-between items-start">
+      <header className="border-b bg-white p-4 shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-start justify-between">
           <div>
-            <h1 className="text-h2 font-bold text-indigo-800">👥 Gestion des utilisateurs</h1>
+            <h1 className="text-h2 font-bold text-indigo-800">Gestion des utilisateurs</h1>
             <p className="text-body-small text-neutral-600">
-              Supprimez ou gérez les utilisateurs du système
+              Supprimez ou gerez les utilisateurs du systeme
             </p>
           </div>
-          <Link to="/admin/dashboard" className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 underline text-sm">
+          <Link to="/admin/dashboard" className="flex items-center gap-2 text-sm text-indigo-600 underline hover:text-indigo-800">
             <ChevronLeft size={16} /> Retour au dashboard
           </Link>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-8">
+      <main className="mx-auto max-w-7xl p-8">
         {loading ? (
-          <div className="text-center text-neutral-600 py-12">Chargement...</div>
+          <div className="py-12 text-center text-neutral-600">Chargement...</div>
         ) : (
           <>
-            {/* Récapitulatif */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm text-blue-800">
                 Total: <span className="font-semibold">{total}</span> utilisateur{total !== 1 ? 's' : ''}
               </p>
             </div>
 
-            {/* Tableau des utilisateurs */}
-            <div className="bg-white rounded-xl shadow overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-700">Email</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-700">Nom</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-700">Rôle</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-700">Statut</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-700">Créé le</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-700">Dernière connexion</th>
-                    <th className="px-6 py-3 text-center text-sm font-semibold text-neutral-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {users.length === 0 ? (
+            <div className="overflow-hidden rounded-xl bg-white shadow">
+              <div className="max-h-[70vh] overflow-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 z-10 border-b bg-gray-100">
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-neutral-600">
-                        Aucun utilisateur trouvé
-                      </td>
+                      <th className="px-6 py-3 text-left font-semibold text-neutral-700">Email</th>
+                      <th className="px-6 py-3 text-left font-semibold text-neutral-700">Nom</th>
+                      <th className="px-6 py-3 text-left font-semibold text-neutral-700">Role</th>
+                      <th className="px-6 py-3 text-left font-semibold text-neutral-700">Statut</th>
+                      <th className="px-6 py-3 text-left font-semibold text-neutral-700">Cree le</th>
+                      <th className="px-6 py-3 text-left font-semibold text-neutral-700">Derniere connexion</th>
+                      <th className="px-6 py-3 text-center font-semibold text-neutral-700">Actions</th>
                     </tr>
-                  ) : (
-                    users.map((u) => (
-                      <tr key={u.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 text-sm text-neutral-800 font-mono">{u.email}</td>
-                        <td className="px-6 py-4 text-sm text-neutral-800">{u.firstName} {u.lastName}</td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                            u.role === 'ADMIN' 
-                              ? 'bg-red-100 text-red-700' 
-                              : 'bg-blue-100 text-blue-700'
-                          }`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                            u.isActive
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {u.isActive ? '🟢 Actif' : '🔴 Inactif'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-neutral-600">{formatDate(u.createdAt)}</td>
-                        <td className="px-6 py-4 text-sm text-neutral-600">{formatDate(u.lastLogin)}</td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => handleDeleteClick(u)}
-                            disabled={u.id === user?.id}
-                            className={`inline-flex items-center gap-2 px-3 py-2 rounded text-sm font-semibold transition ${
-                              u.id === user?.id
-                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : 'bg-red-100 text-red-700 hover:bg-red-200'
-                            }`}
-                          >
-                            <Trash2 size={16} />
-                            Supprimer
-                          </button>
+                  </thead>
+                  <tbody className="divide-y">
+                    {users.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-8 text-center text-neutral-600">
+                          Aucun utilisateur trouve
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      users.map((u) => (
+                        <tr key={u.id} className="transition-colors odd:bg-white even:bg-indigo-50/30 hover:bg-indigo-50/60">
+                          <td className="px-6 py-4 font-mono text-sm text-neutral-800">{u.email}</td>
+                          <td className="px-6 py-4 text-sm text-neutral-800">{u.firstName} {u.lastName}</td>
+                          <td className="px-6 py-4 text-sm">
+                            <span className={`rounded px-2 py-1 text-xs font-semibold ${
+                              u.role === 'ADMIN'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <span className={`rounded px-2 py-1 text-xs font-semibold ${
+                              u.isActive
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {u.isActive ? 'Actif' : 'Inactif'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-600">{formatDate(u.createdAt)}</td>
+                          <td className="px-6 py-4 text-sm text-neutral-600">{formatDate(u.lastLogin)}</td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => handleDeleteClick(u)}
+                              disabled={u.id === user?.id}
+                              className={`inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-semibold transition ${
+                                u.id === user?.id
+                                  ? 'cursor-not-allowed bg-gray-200 text-gray-500'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                            >
+                              <Trash2 size={16} />
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-between items-center mt-6">
+              <div className="mt-6 flex items-center justify-between">
                 <Button
                   variant="secondary"
                   onClick={() => setPage(Math.max(0, page - 1))}
                   disabled={page === 0}
                 >
-                  <ChevronLeft size={16} /> Précédent
+                  <ChevronLeft size={16} /> Precedent
                 </Button>
                 <span className="text-sm text-neutral-600">
                   Page {page + 1} / {totalPages}
@@ -204,7 +203,6 @@ export default function AdminManageUsersPage() {
         )}
       </main>
 
-      {/* Modal de confirmation de suppression */}
       {showDeleteModal && userToDelete && (
         <Modal
           open={true}
@@ -213,12 +211,12 @@ export default function AdminManageUsersPage() {
         >
           <div className="space-y-4">
             <p className="text-neutral-700">
-              Êtes-vous sûr de vouloir supprimer l'utilisateur <span className="font-bold">{userToDelete.email}</span> ?
+              Etes-vous sur de vouloir supprimer l'utilisateur <span className="font-bold">{userToDelete.email}</span> ?
             </p>
             <p className="text-sm text-red-600">
-              ⚠️ Cette action est irréversible et supprimera tous les certificats et demandes associés.
+              Cette action est irreversible et supprimera tous les certificats et demandes associes.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex justify-end gap-3">
               <Button
                 variant="secondary"
                 onClick={() => setShowDeleteModal(false)}
