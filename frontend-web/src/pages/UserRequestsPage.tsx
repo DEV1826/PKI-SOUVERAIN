@@ -10,6 +10,9 @@ export default function UserRequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [csrTextById, setCsrTextById] = useState<Record<string, string>>({});
+  const [csrFileById, setCsrFileById] = useState<Record<string, File | null>>({});
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const apiBaseUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:8080/api';
 
   useEffect(() => {
@@ -19,6 +22,35 @@ export default function UserRequestsPage() {
       .catch(() => setError('Erreur lors du chargement des demandes.'))
       .finally(() => setLoading(false));
   }, []);
+
+  const reload = async () => {
+    try {
+      const data = await userService.getMyRequests();
+      setRequests(data);
+    } catch {
+      setError('Erreur lors du chargement des demandes.');
+    }
+  };
+
+  const submitCsr = async (requestId: string) => {
+    const csrText = csrTextById[requestId];
+    const csrFile = csrFileById[requestId] || undefined;
+    if (!csrText?.trim() && !csrFile) {
+      setError('Veuillez fournir un CSR (texte ou fichier).');
+      return;
+    }
+    setSubmittingId(requestId);
+    try {
+      await userService.submitCsrAfterReview(requestId, csrText, csrFile || undefined);
+      setCsrTextById((prev) => ({ ...prev, [requestId]: '' }));
+      setCsrFileById((prev) => ({ ...prev, [requestId]: null }));
+      await reload();
+    } catch (e: any) {
+      setError(e?.response?.data?.error || "Erreur lors de l'envoi du CSR.");
+    } finally {
+      setSubmittingId(null);
+    }
+  };
 
   const previewDocument = (doc: RequestDocument) => {
     const url = `${apiBaseUrl}/user/certificate-requests/${doc.requestId}/documents/${encodeURIComponent(doc.filename)}?preview=true`;
@@ -80,6 +112,35 @@ export default function UserRequestsPage() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {r.status === 'REVIEW_APPROVED' && (
+                <div className="mt-4 rounded-xl border border-primary-100 bg-primary-50/40 p-4 dark:border-primary-900/40 dark:bg-primary-950/20">
+                  <div className="text-sm font-semibold text-primary-800 dark:text-primary-300">Soumettre le CSR</div>
+                  <div className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                    L admin a valide votre identite. Vous pouvez maintenant envoyer votre CSR.
+                  </div>
+                  <textarea
+                    className="mt-3 h-28 w-full rounded-lg border border-neutral-200 bg-white p-3 text-xs shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                    value={csrTextById[r.id] || ''}
+                    onChange={(e) => setCsrTextById((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                    placeholder={'-----BEGIN CERTIFICATE REQUEST-----\n...\n-----END CERTIFICATE REQUEST-----'}
+                  />
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <input
+                      type="file"
+                      accept=".csr,.pem,text/*"
+                      onChange={(e) => setCsrFileById((prev) => ({ ...prev, [r.id]: e.target.files?.[0] || null }))}
+                    />
+                    <button
+                      className="rounded bg-primary-700 px-3 py-2 text-xs font-semibold text-white"
+                      onClick={() => submitCsr(r.id)}
+                      disabled={submittingId === r.id}
+                    >
+                      {submittingId === r.id ? 'Envoi...' : 'Envoyer le CSR'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

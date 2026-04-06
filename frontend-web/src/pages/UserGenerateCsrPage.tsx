@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 import Button from '../components/Button';
 
 export default function UserGenerateCsrPage() {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -16,26 +16,31 @@ export default function UserGenerateCsrPage() {
   const [organizationalUnit, setOrganizationalUnit] = useState<string>('');
   const [locality, setLocality] = useState<string>('');
   const [stateRegion, setStateRegion] = useState<string>('');
-  const [country, setCountry] = useState<string>('');
+  const [country, setCountry] = useState<string>('CM');
   const [emailAddr, setEmailAddr] = useState<string>('');
-  const [csrText, setCsrText] = useState<string>('');
-  const [csrFile, setCsrFile] = useState<File | null>(null);
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+  const [birthDate, setBirthDate] = useState<string>('');
+  const [birthPlace, setBirthPlace] = useState<string>('');
+  const [nationality, setNationality] = useState<string>('CM');
+  const [identityDocumentType, setIdentityDocumentType] = useState<string>('CNI');
+  const [identityDocumentNumber, setIdentityDocumentNumber] = useState<string>('');
+  const [identityDocumentExpiry, setIdentityDocumentExpiry] = useState<string>('');
   const [aiModel, setAiModel] = useState<tmImage.CustomMobileNet | null>(null);
   const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiResults, setAiResults] = useState<Record<string, { label: string; score: number; ok: boolean }>>({});
   const aiRequestIdRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const csrFileRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     setError(null);
     setCommonName((user?.firstName + ' ' + user?.lastName) || '');
-    setOrganization('');
     setEmailAddr(user?.email || '');
-    setCountry('CM');
+    setFirstName(user?.firstName || '');
+    setLastName(user?.lastName || '');
   }, [user]);
 
   useEffect(() => {
@@ -146,23 +151,6 @@ export default function UserGenerateCsrPage() {
 
   const onBrowse = () => fileInputRef.current?.click();
 
-  const onSelectCsrFile = (f: File | null) => {
-    if (!f) {
-      setCsrFile(null);
-      return;
-    }
-    if (f.size > 200 * 1024) {
-      setError('Fichier CSR trop volumineux (>200KB)');
-      return;
-    }
-    if (!(/\.pem$|\.csr$|text\/|application\/x-pem-file/.test(f.name) || /text\//.test(f.type))) {
-      setError('Type de fichier CSR non pris en charge');
-      return;
-    }
-    setCsrFile(f);
-    setError(null);
-  };
-
   const removeFile = (idx: number) =>
     setFiles((prev) => {
       const next = prev.filter((_, i) => i !== idx);
@@ -176,14 +164,18 @@ export default function UserGenerateCsrPage() {
       }
       return next;
     });
-  const removeCsrFile = () => setCsrFile(null);
 
   const validateStep1 = () => {
+    if (!firstName.trim()) return 'Le prenom est requis';
+    if (!lastName.trim()) return 'Le nom est requis';
+    if (!identityDocumentNumber.trim()) return 'Le numero de piece est requis';
+    if (!identityDocumentExpiry.trim()) return "La date d'expiration est requise";
+    if (!nationality.trim() || !/^[A-Za-z]{2}$/.test(nationality.trim())) return 'La nationalite doit etre un code ISO 2 lettres';
     if (!commonName.trim()) return 'Le Common Name (CN) est requis';
     if (!organization.trim()) return "L'organisation (O) est requise";
     if (!locality.trim()) return 'La ville (L) est requise';
     if (!country.trim() || !/^[A-Za-z]{2}$/.test(country.trim())) return 'Le pays (C) doit etre un code ISO 2 lettres';
-    if (!emailAddr.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailAddr.trim())) return 'Un email valide est requis';
+    if (!emailAddr.trim() || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(emailAddr.trim())) return 'Un email valide est requis';
     return null;
   };
 
@@ -203,20 +195,19 @@ export default function UserGenerateCsrPage() {
         setError("Veuillez ajouter au moins une piece d'identite avant de continuer.");
         return;
       }
-      setStep(3);
     }
   };
 
   const goPrevious = () => {
     setError(null);
-    setStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2 | 3)));
+    setStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)));
   };
 
   const onSubmit = async () => {
     setError(null);
     const validation = validateStep1();
     if (validation) return setError(validation);
-    if (!csrText.trim() && !csrFile) return setError('Un CSR (texte ou fichier) est requis pour soumettre la demande.');
+    if (files.length === 0) return setError("Veuillez ajouter au moins une piece d'identite.");
 
     setSubmitting(true);
     try {
@@ -228,8 +219,14 @@ export default function UserGenerateCsrPage() {
       form.append('state', stateRegion || '');
       form.append('country', country || '');
       form.append('email', emailAddr || '');
-      if (csrText.trim()) form.append('csr', csrText.trim());
-      else if (csrFile) form.append('csrFile', csrFile);
+      form.append('firstName', firstName.trim());
+      form.append('lastName', lastName.trim());
+      if (birthDate.trim()) form.append('birthDate', birthDate.trim());
+      if (birthPlace.trim()) form.append('birthPlace', birthPlace.trim());
+      form.append('nationality', nationality.trim().toUpperCase());
+      form.append('identityDocumentType', identityDocumentType.trim().toUpperCase());
+      form.append('identityDocumentNumber', identityDocumentNumber.trim());
+      form.append('identityDocumentExpiry', identityDocumentExpiry.trim());
       files.forEach((f) => form.append('documents', f));
       await userService.submitCertificateRequest(form);
       navigate('/requests');
@@ -245,23 +242,30 @@ export default function UserGenerateCsrPage() {
       <div className="mb-6 rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
         <h1 className="mb-2 text-h3 font-semibold dark:text-neutral-100">Nouvelle demande</h1>
         <div className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
-          Etape {step}/3 - {step === 1 ? 'Informations du certificat' : step === 2 ? "Piece d'identite" : 'CSR'}
+          Etape {step}/2 - {step === 1 ? 'Informations personnelles' : "Piece d'identite"}
         </div>
-        <div className="mb-2 grid grid-cols-3 gap-2">
-          <StepBadge active={step === 1} done={step > 1} label="1. Formulaire" />
-          <StepBadge active={step === 2} done={step > 2} label="2. Identite" />
-          <StepBadge active={step === 3} done={false} label="3. CSR" />
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <StepBadge active={step === 1} done={step > 1} label="1. Infos" />
+          <StepBadge active={step === 2} done={false} label="2. Identite" />
         </div>
       </div>
 
       {step === 1 && (
         <div className="mb-6 rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
-          <h2 className="mb-3 text-h3 font-semibold dark:text-neutral-100">Informations du certificat</h2>
+          <h2 className="mb-3 text-h3 font-semibold dark:text-neutral-100">Informations personnelles</h2>
           <div className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
-            Remplissez les informations de votre certificat numerique. Tous les champs marques d'un asterisque sont obligatoires.
+            Renseignez les informations telles qu'elles figurent sur votre piece d'identite.
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label="Prenom *" value={firstName} onChange={setFirstName} placeholder="Prenom" />
+            <Field label="Nom *" value={lastName} onChange={setLastName} placeholder="Nom" />
+            <Field label="Date de naissance" value={birthDate} onChange={setBirthDate} placeholder="YYYY-MM-DD" />
+            <Field label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Ville" />
+            <Field label="Nationalite (ISO) *" value={nationality} onChange={(v) => setNationality(v.toUpperCase())} placeholder="CM" />
+            <Field label="Type de piece *" value={identityDocumentType} onChange={(v) => setIdentityDocumentType(v.toUpperCase())} placeholder="CNI" />
+            <Field label="Numero de piece *" value={identityDocumentNumber} onChange={setIdentityDocumentNumber} placeholder="123456789" />
+            <Field label="Expiration piece *" value={identityDocumentExpiry} onChange={setIdentityDocumentExpiry} placeholder="YYYY-MM-DD" />
             <Field label="Common Name (CN) *" value={commonName} onChange={setCommonName} placeholder="Japhet Fadil" help="Votre nom complet tel qu'il apparaitra sur le certificat" />
             <Field label="Organisation (O) *" value={organization} onChange={setOrganization} placeholder="Ministere de l'Interieur" />
             <Field label="Unite Organisationnelle (OU)" value={organizationalUnit} onChange={setOrganizationalUnit} placeholder="Direction des Systemes d'Information" />
@@ -340,38 +344,9 @@ export default function UserGenerateCsrPage() {
         </div>
       )}
 
-      {step === 3 && (
-        <div className="mb-8 rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
-          <h2 className="mb-2 text-h3 font-semibold dark:text-neutral-100">CSR (obligatoire)</h2>
-          <div className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">
-            Collez une CSR au format PEM ou uploadez un fichier CSR.
-          </div>
-          <div className="mb-4">
-            <textarea
-              className="h-36 w-full rounded-lg border border-neutral-200 bg-white p-3 text-sm shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-              value={csrText}
-              onChange={(e) => setCsrText(e.target.value)}
-              placeholder={'-----BEGIN CERTIFICATE REQUEST-----\n...\n-----END CERTIFICATE REQUEST-----'}
-            />
-          </div>
-
-          <div>
-            <div className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">OU uploader un fichier CSR</div>
-            <div className="flex items-center gap-3">
-              <input ref={csrFileRef} type="file" className="hidden" accept=".csr,.pem,text/*" onChange={(e) => onSelectCsrFile(e.target.files ? e.target.files[0] : null)} />
-              <Button variant="secondary" onClick={() => csrFileRef.current?.click()}>
-                {csrFile ? 'Remplacer le fichier CSR' : 'Choisir un fichier CSR'}
-              </Button>
-              {csrFile && (
-                <div className="text-sm text-neutral-700 dark:text-neutral-300">
-                  {csrFile.name}
-                  <button className="ml-3 text-red-600" onClick={removeCsrFile}>
-                    Supprimer
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+      {step === 2 && (
+        <div className="mb-4 rounded-2xl border border-neutral-100 bg-white p-4 text-sm text-neutral-600 shadow dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+          Apres verification admin, vous pourrez soumettre la CSR depuis la page "Suivi de mes demandes".
         </div>
       )}
 
@@ -384,13 +359,13 @@ export default function UserGenerateCsrPage() {
             Precedent
           </Button>
         )}
-        {step < 3 ? (
+        {step < 2 ? (
           <Button onClick={goNext} disabled={submitting}>
             Suivant
           </Button>
         ) : (
           <Button onClick={onSubmit} disabled={submitting}>
-            {submitting ? 'Envoi...' : 'Soumettre la demande'}
+            {submitting ? 'Envoi...' : 'Soumettre pour verification'}
           </Button>
         )}
       </div>

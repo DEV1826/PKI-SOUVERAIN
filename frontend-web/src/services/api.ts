@@ -184,6 +184,28 @@ export const userService = {
   },
 
   /**
+   * Soumettre un CSR apres validation admin
+   */
+  submitCsrAfterReview: async (requestId: string, csrText?: string, csrFile?: File): Promise<any> => {
+    const form = new FormData();
+    if (csrText && csrText.trim()) form.append('csr', csrText.trim());
+    if (csrFile) form.append('csrFile', csrFile);
+    const response = await apiClient.post(`/user/certificate-requests/${requestId}/submit-csr`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+    return response.data;
+  },
+
+  /**
+   * Generer et soumettre une CSR serveur apres validation admin
+   */
+  generateCsrAfterReview: async (requestId: string, payload: { cn?: string; o?: string; ou?: string; l?: string; st?: string; c?: string; email?: string }): Promise<any> => {
+    const response = await apiClient.post(`/user/certificate-requests/${requestId}/generate-csr`, null, { params: payload });
+    return response.data;
+  },
+
+  /**
    * RÃ©cupÃ©rer les demandes de certificats de l'utilisateur
    */
   getMyRequests: async (): Promise<any[]> => {
