@@ -36,7 +36,11 @@ export default function LoginPage() {
       const response = await authService.login({ email, password });
       setUser(response.user);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Email ou mot de passe invalide');
+      if (!err?.response || err?.code === 'ERR_NETWORK') {
+        setError('Serveur indisponible. Reessayez dans quelques instants.');
+      } else {
+        setError(err.response?.data?.message || 'Email ou mot de passe invalide');
+      }
     } finally {
       setLoading(false);
     }
