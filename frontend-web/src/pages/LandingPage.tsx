@@ -1,4 +1,4 @@
-ï»¿import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Shield,
   Award,
@@ -24,9 +24,9 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-neutral-200/50 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-neutral-200/50 shadow-sm dark:bg-neutral-950/80 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -50,7 +50,7 @@ export default function LandingPage() {
                 <a
                   key={label}
                   href={href}
-                  className="px-4 py-2 text-neutral-700 hover:text-indigo-600 font-medium transition-colors"
+                  className="px-4 py-2 text-neutral-700 hover:text-indigo-600 font-medium transition-colors dark:text-neutral-300 dark:hover:text-indigo-300"
                 >
                   {label}
                 </a>
@@ -61,7 +61,7 @@ export default function LandingPage() {
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate('/login')}
-                className="px-4 py-2 text-neutral-700 font-semibold hover:text-indigo-600 transition-colors"
+                className="px-4 py-2 text-neutral-700 font-semibold hover:text-indigo-600 transition-colors dark:text-neutral-300 dark:hover:text-indigo-300"
               >
                 Connexion
               </button>
@@ -74,20 +74,20 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-indigo-50 py-20 md:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-indigo-50 py-20 md:py-32 dark:from-neutral-950 dark:via-slate-950 dark:to-indigo-950/25">
         {/* Background shapes */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob dark:bg-indigo-900/40"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 dark:bg-indigo-950/50"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-8 inline-flex items-center px-4 py-2 rounded-full bg-indigo-100/50 border border-indigo-200">
+          <div className="mb-8 inline-flex items-center px-4 py-2 rounded-full bg-indigo-100/50 border border-indigo-200 dark:bg-indigo-900/30 dark:border-indigo-700">
             <Zap className="h-4 w-4 text-indigo-600 mr-2" />
-            <span className="text-sm font-semibold text-indigo-700">Infrastructure de confiance nationale</span>
+            <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Infrastructure de confiance nationale</span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-neutral-900 mb-6 leading-tight">
+          <h1 className="text-5xl md:text-6xl font-bold text-neutral-900 mb-6 leading-tight dark:text-neutral-100">
             Votre Identite Numerique
             <br />
             <span className="bg-gradient-to-r from-indigo-600 to-indigo-700 bg-clip-text text-transparent">
@@ -95,7 +95,7 @@ export default function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-xl text-neutral-700 mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-neutral-700 mb-12 max-w-2xl mx-auto leading-relaxed dark:text-neutral-300">
             Plateforme nationale de certification numerique conforme aux standards X.509.
             Demandez, suivez et recuperez vos certificats sur un parcours clair et verifiable.
           </p>
@@ -126,8 +126,8 @@ export default function LandingPage() {
                 <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-indigo-100 mb-3">
                   <stat.icon className="h-6 w-6 text-indigo-600" />
                 </div>
-                <div className="text-sm font-semibold text-neutral-900">{stat.label}</div>
-                <div className="text-xs text-neutral-600 mt-1">{stat.desc}</div>
+                <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{stat.label}</div>
+                <div className="text-xs text-neutral-600 mt-1 dark:text-neutral-400">{stat.desc}</div>
               </div>
             ))}
           </div>
@@ -135,11 +135,11 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="fonctionnalites" className="py-20 bg-white">
+      <section id="fonctionnalites" className="py-20 bg-white dark:bg-neutral-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-4">Une infrastructure complete</h2>
-            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+            <h2 className="text-4xl font-bold text-neutral-900 mb-4 dark:text-neutral-100">Une infrastructure complete</h2>
+            <p className="text-lg text-neutral-600 max-w-2xl mx-auto dark:text-neutral-400">
               Tout ce dont vous avez besoin pour gerer vos certificats numeriques de maniere fiable et securisee.
             </p>
           </div>
@@ -164,15 +164,15 @@ export default function LandingPage() {
             ].map((feature, i) => (
               <div
                 key={i}
-                className="relative group rounded-xl border border-neutral-200 p-8 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 bg-white overflow-hidden"
+                className="relative group rounded-xl border border-neutral-200 p-8 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 bg-white overflow-hidden dark:border-neutral-700 dark:bg-neutral-900"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative">
                   <div className="flex items-center justify-center w-14 h-14 rounded-lg bg-indigo-100 mb-6 group-hover:bg-indigo-200 transition-colors">
                     <feature.icon className="h-7 w-7 text-indigo-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-neutral-900 mb-3">{feature.title}</h3>
-                  <p className="text-neutral-700 leading-relaxed">{feature.description}</p>
+                  <h3 className="text-xl font-bold text-neutral-900 mb-3 dark:text-neutral-100">{feature.title}</h3>
+                  <p className="text-neutral-700 leading-relaxed dark:text-neutral-300">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -181,10 +181,10 @@ export default function LandingPage() {
       </section>
 
       {/* Process Section */}
-      <section id="processus" className="py-20 bg-neutral-100/80">
+      <section id="processus" className="py-20 bg-neutral-100/80 dark:bg-neutral-900/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-4">Comment ca marche</h2>
+            <h2 className="text-4xl font-bold text-neutral-900 mb-4 dark:text-neutral-100">Comment ca marche</h2>
             <p className="text-lg text-neutral-600 max-w-3xl mx-auto">
               Un processus clair en 3 etapes: demande, verification administrative, puis emission du certificat.
             </p>
@@ -208,12 +208,12 @@ export default function LandingPage() {
                 description: 'Apres validation, votre CSR est signee et le certificat est disponible dans votre espace.'
               }
             ].map((step, i) => (
-              <div key={i} className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
+              <div key={i} className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
                 <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center mb-5">
                   <step.icon className="h-6 w-6 text-indigo-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-neutral-900 mb-3">{step.title}</h3>
-                <p className="text-neutral-700">{step.description}</p>
+                <h3 className="text-xl font-semibold text-neutral-900 mb-3 dark:text-neutral-100">{step.title}</h3>
+                <p className="text-neutral-700 dark:text-neutral-300">{step.description}</p>
               </div>
             ))}
           </div>
@@ -221,13 +221,13 @@ export default function LandingPage() {
       </section>
 
       {/* Trust Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-neutral-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
                 icon: Scale,
-                title: 'TraÃ§abilite complete',
+                title: 'Traçabilite complete',
                 text: 'Toutes les actions critiques sont journalisees (audit) pour faciliter le controle et la conformite.'
               },
               {
@@ -241,12 +241,12 @@ export default function LandingPage() {
                 text: 'Gestion admin des demandes, des statuts et de la chaine de certification.'
               }
             ].map((item, i) => (
-              <div key={i} className="rounded-xl border border-neutral-200 p-6 bg-neutral-50">
+              <div key={i} className="rounded-xl border border-neutral-200 p-6 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800/60">
                 <div className="w-11 h-11 rounded-lg bg-indigo-100 flex items-center justify-center mb-4">
                   <item.icon className="h-5 w-5 text-indigo-600" />
                 </div>
-                <h3 className="font-semibold text-neutral-900 mb-2">{item.title}</h3>
-                <p className="text-neutral-700 text-sm leading-relaxed">{item.text}</p>
+                <h3 className="font-semibold text-neutral-900 mb-2 dark:text-neutral-100">{item.title}</h3>
+                <p className="text-neutral-700 text-sm leading-relaxed dark:text-neutral-300">{item.text}</p>
               </div>
             ))}
           </div>
@@ -254,11 +254,11 @@ export default function LandingPage() {
       </section>
 
       {/* Benefits Section */}
-      <section id="a-propos" className="py-20 bg-neutral-50">
+      <section id="a-propos" className="py-20 bg-neutral-50 dark:bg-neutral-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-4xl font-bold text-neutral-900 mb-6 leading-tight">Pourquoi choisir PKI Souverain ?</h2>
+              <h2 className="text-4xl font-bold text-neutral-900 mb-6 leading-tight dark:text-neutral-100">Pourquoi choisir PKI Souverain ?</h2>
               <ul className="space-y-4">
                 {[
                   'Parcours utilisateur guide avec etapes de verification',
@@ -272,19 +272,19 @@ export default function LandingPage() {
                     <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 mt-1">
                       <ChevronRight className="h-4 w-4 text-indigo-600" />
                     </div>
-                    <span className="text-lg text-neutral-700">{benefit}</span>
+                    <span className="text-lg text-neutral-700 dark:text-neutral-300">{benefit}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl blur-3xl opacity-20"></div>
-              <div className="relative bg-gradient-to-br from-indigo-50 to-white rounded-2xl p-8 border border-indigo-100">
+              <div className="relative bg-gradient-to-br from-indigo-50 to-white rounded-2xl p-8 border border-indigo-100 dark:from-indigo-950/40 dark:to-neutral-900 dark:border-indigo-900/60">
                 <div className="flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-700 mx-auto mb-6">
                   <Shield className="h-10 w-10 text-white" />
                 </div>
-                <p className="text-center text-neutral-800 font-semibold mb-4">Certificats numeriques PKI Souverain</p>
-                <p className="text-center text-neutral-600">La solution de confiance pour votre identite numerique.</p>
+                <p className="text-center text-neutral-800 font-semibold mb-4 dark:text-neutral-100">Certificats numeriques PKI Souverain</p>
+                <p className="text-center text-neutral-600 dark:text-neutral-400">La solution de confiance pour votre identite numerique.</p>
               </div>
             </div>
           </div>
@@ -292,10 +292,10 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 bg-white">
+      <section id="faq" className="py-20 bg-white dark:bg-neutral-900">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-4">FAQ</h2>
+            <h2 className="text-4xl font-bold text-neutral-900 mb-4 dark:text-neutral-100">FAQ</h2>
             <p className="text-lg text-neutral-600">Reponses rapides aux questions frequentes.</p>
           </div>
           <div className="space-y-4">
@@ -317,12 +317,12 @@ export default function LandingPage() {
                 a: 'L administrateur laisse un motif de correction. Vous pouvez modifier puis resoumettre.'
               }
             ].map((item, idx) => (
-              <div key={idx} className="rounded-xl border border-neutral-200 p-6 bg-neutral-50">
+              <div key={idx} className="rounded-xl border border-neutral-200 p-6 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800/60">
                 <div className="flex items-start gap-3">
                   <BadgeCheck className="h-5 w-5 text-indigo-600 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-neutral-900">{item.q}</h3>
-                    <p className="text-neutral-700 mt-2">{item.a}</p>
+                    <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{item.q}</h3>
+                    <p className="text-neutral-700 mt-2 dark:text-neutral-300">{item.a}</p>
                   </div>
                 </div>
               </div>
@@ -383,10 +383,11 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <div className="text-sm">Â© 2026 PKI Souverain. Tous droits reserves.</div>
+            <div className="text-sm">© 2026 PKI Souverain. Tous droits reserves.</div>
           </div>
         </div>
       </footer>
     </div>
   );
 }
+
