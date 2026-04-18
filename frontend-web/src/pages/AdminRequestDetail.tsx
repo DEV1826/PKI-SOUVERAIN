@@ -99,6 +99,14 @@ export default function AdminRequestDetail() {
   if (error) return <div className="text-red-600 dark:text-red-300">{error}</div>;
   if (!request) return <div className="dark:text-neutral-300">Aucune demande trouvee</div>;
 
+  const field = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = request?.[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') return String(value);
+    }
+    return '-';
+  };
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -113,6 +121,14 @@ export default function AdminRequestDetail() {
           <h2 className="mb-2 font-semibold dark:text-neutral-100">Informations utilisateur</h2>
           <div className="dark:text-neutral-300"><strong>Utilisateur:</strong> {request.userFullName || request.userEmail || request.userId}</div>
           <div className="dark:text-neutral-300"><strong>Email:</strong> {request.userEmail}</div>
+          <div className="dark:text-neutral-300"><strong>Prenom:</strong> {field('firstName', 'first_name')}</div>
+          <div className="dark:text-neutral-300"><strong>Nom:</strong> {field('lastName', 'last_name')}</div>
+          <div className="dark:text-neutral-300"><strong>Date de naissance:</strong> {field('birthDate', 'birth_date')}</div>
+          <div className="dark:text-neutral-300"><strong>Lieu de naissance:</strong> {field('birthPlace', 'birth_place')}</div>
+          <div className="dark:text-neutral-300"><strong>Nationalite:</strong> {field('nationality')}</div>
+          <div className="dark:text-neutral-300"><strong>Type de piece:</strong> {field('identityDocumentType', 'identity_document_type')}</div>
+          <div className="dark:text-neutral-300"><strong>Numero de piece:</strong> {field('identityDocumentNumber', 'identity_document_number')}</div>
+          <div className="dark:text-neutral-300"><strong>Expiration piece:</strong> {field('identityDocumentExpiry', 'identity_document_expiry')}</div>
           <div className="dark:text-neutral-300"><strong>Soumis:</strong> {request.submittedAt}</div>
           <div className="dark:text-neutral-300"><strong>Statut:</strong> {request.status}</div>
         </div>
