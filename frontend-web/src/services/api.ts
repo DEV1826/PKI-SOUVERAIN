@@ -297,12 +297,12 @@ export const adminService = {
    * CRL / Revocation / CA
    */
   generateCrl: async (): Promise<{ crlPem?: string; crlPath?: string }> => {
-    const response = await apiClient.post(`/admin/generate-crl`);
+    const response = await apiClient.post<{ crlPem?: string; crlPath?: string }>(`/admin/generate-crl`);
     return response.data;
   },
 
   rotateCrl: async (): Promise<{ crlPem?: string; crlPath?: string }> => {
-    const response = await apiClient.post(`/admin/rotate-crl`);
+    const response = await apiClient.post<{ crlPem?: string; crlPath?: string }>(`/admin/rotate-crl`);
     return response.data;
   },
 
