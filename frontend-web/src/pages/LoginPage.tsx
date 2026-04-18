@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authService } from '../services/api';
+import { authService, userService } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import Input from '../components/Input';
 import Button from '../components/Button';
@@ -29,15 +29,21 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError('');
 
     try {
-      const response = await authService.login({ email, password });
-      setUser(response.user);
+      await authService.login({ email, password });
+      const me = await userService.getMe();
+      setUser(me);
     } catch (err: any) {
       if (!err?.response || err?.code === 'ERR_NETWORK') {
         setError('Serveur indisponible. Reessayez dans quelques instants.');
+      } else if (err?.response?.status === 403) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        setError('Session invalide. Veuillez vous reconnecter.');
       } else {
         setError(err.response?.data?.message || 'Email ou mot de passe invalide');
       }
