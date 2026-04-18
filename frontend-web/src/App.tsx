@@ -1,5 +1,6 @@
-﻿import { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import NotificationBell from './components/NotificationBell';
 import Sidebar from './components/Sidebar';
 import ThemeToggle from './components/ThemeToggle';
 import { ToastProvider } from './components/Toast';
@@ -72,7 +73,8 @@ function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <div className="fixed right-4 top-4 z-50">
+        <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
+          <NotificationBell />
           <ThemeToggle />
         </div>
 
@@ -137,3 +139,4 @@ function ProtectedRoute({ children, adminOnly = false }: any) {
 }
 
 export default App;
+

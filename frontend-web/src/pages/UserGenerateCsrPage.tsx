@@ -175,7 +175,7 @@ export default function UserGenerateCsrPage() {
     if (!organization.trim()) return "L'organisation (O) est requise";
     if (!locality.trim()) return 'La ville (L) est requise';
     if (!country.trim() || !/^[A-Za-z]{2}$/.test(country.trim())) return 'Le pays (C) doit etre un code ISO 2 lettres';
-    if (!emailAddr.trim() || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(emailAddr.trim())) return 'Un email valide est requis';
+    if (!emailAddr.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailAddr.trim().toLowerCase())) return 'Un email valide est requis';
     return null;
   };
 
@@ -218,7 +218,7 @@ export default function UserGenerateCsrPage() {
       form.append('locality', locality || '');
       form.append('state', stateRegion || '');
       form.append('country', country || '');
-      form.append('email', emailAddr || '');
+      form.append('email', emailAddr.trim().toLowerCase());
       form.append('firstName', firstName.trim());
       form.append('lastName', lastName.trim());
       if (birthDate.trim()) form.append('birthDate', birthDate.trim());
