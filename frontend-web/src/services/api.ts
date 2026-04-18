@@ -6,6 +6,8 @@
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8080/api';
 const API_BASE_URL_CLEAN = API_BASE_URL.replace(/\/+$/, '');
+const isUsableToken = (token: string | null | undefined): token is string =>
+  !!token && token !== 'undefined' && token !== 'null' && token.trim().length > 10;
 
 // Instance Axios configurÃ©e
 const apiClient = axios.create({
@@ -20,7 +22,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config: any) => {
     const token = localStorage.getItem('accessToken');
-    if (token) {
+    if (isUsableToken(token)) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -112,11 +114,24 @@ export const authService = {
    * Connexion
    */
   login: async (data: LoginRequest): Promise<JwtResponse> => {
-    const response = await apiClient.post<JwtResponse>('/auth/login', data);
+    const response = await apiClient.post<any>('/auth/login', data);
+    const accessToken = response.data?.accessToken || response.data?.token;
+    const refreshToken = response.data?.refreshToken || '';
+
+    if (!isUsableToken(accessToken)) {
+      throw new Error('Reponse de connexion invalide: token absent');
+    }
+
     // Stocker les tokens
-    localStorage.setItem('accessToken', response.data.accessToken);
-    localStorage.setItem('refreshToken', response.data.refreshToken);
-    return response.data;
+    localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+    else localStorage.removeItem('refreshToken');
+
+    return {
+      ...response.data,
+      accessToken,
+      refreshToken,
+    } as JwtResponse;
   },
 
   /**

@@ -34,7 +34,9 @@ function useHydrateAuth() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (!token) {
+    if (!token || token === 'undefined' || token === 'null') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       setLoading(false);
       return;
     }
