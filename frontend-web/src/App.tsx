@@ -33,6 +33,19 @@ function useHydrateAuth() {
   const setLoading = useAuthStore((s) => s.setLoading);
 
   useEffect(() => {
+    const hashPath = (window.location.hash || '').replace(/^#/, '');
+    const isPublicRoute =
+      hashPath === '/' ||
+      hashPath.startsWith('/login') ||
+      hashPath.startsWith('/register') ||
+      hashPath.startsWith('/forgot-password') ||
+      hashPath.startsWith('/reset-password');
+
+    if (isPublicRoute) {
+      setLoading(false);
+      return;
+    }
+
     const token = localStorage.getItem('accessToken');
     if (!token || token === 'undefined' || token === 'null') {
       localStorage.removeItem('accessToken');

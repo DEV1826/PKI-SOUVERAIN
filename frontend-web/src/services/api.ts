@@ -114,7 +114,22 @@ export const authService = {
    * Connexion
    */
   login: async (data: LoginRequest): Promise<JwtResponse> => {
-    const response = await apiClient.post<any>('/auth/login', data);
+    let response: any;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await apiClient.post<any>('/auth/login', data);
+        break;
+      } catch (err: any) {
+        lastError = err;
+        const transientNetwork = !err?.response || err?.code === 'ERR_NETWORK' || err?.code === 'ECONNABORTED';
+        if (!transientNetwork || attempt === 2) throw err;
+        await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+      }
+    }
+
+    if (!response) throw lastError || new Error('Connexion impossible');
     const accessToken = response.data?.accessToken || response.data?.token;
     const refreshToken = response.data?.refreshToken || '';
 
