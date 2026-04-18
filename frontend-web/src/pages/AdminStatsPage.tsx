@@ -17,6 +17,7 @@ import {
 import type { DashboardData } from '../services/api';
 import { adminService } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
+import { useThemeStore } from '../stores/themeStore';
 
 type MonthChannels = {
   month: string;
@@ -51,17 +52,20 @@ type CountryShare = {
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aout'];
 const DEVICE_COLORS = ['#4f61ff', '#738cff', '#a9bcff'];
-const TOOLTIP_STYLE = {
-  background: '#0d1730',
-  border: '1px solid #243456',
-  borderRadius: '12px',
-  color: '#e2e8f0',
-};
-
 export default function AdminStatsPage() {
   const user = useAuthStore((state) => state.user);
+  const theme = useThemeStore((state) => state.theme);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const isDark = theme === 'dark';
+  const chartGrid = isDark ? '#24304f' : '#d4deef';
+  const chartAxis = isDark ? '#8ba2c7' : '#54607a';
+  const tooltipStyle = {
+    background: isDark ? '#0d1730' : '#ffffff',
+    border: isDark ? '1px solid #243456' : '1px solid #d9e2f1',
+    borderRadius: '12px',
+    color: isDark ? '#e2e8f0' : '#111827',
+  };
 
   useEffect(() => {
     const loadStats = async () => {
@@ -159,29 +163,29 @@ export default function AdminStatsPage() {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-8 text-slate-200">
+      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200">
         Chargement des statistiques...
       </div>
     );
   }
 
   return (
-    <div className="relative mx-auto max-w-7xl space-y-7 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 -z-10 rounded-3xl bg-[radial-gradient(circle_at_top_left,rgba(69,98,255,0.15),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(120,90,255,0.12),transparent_38%)]" />
-      <header className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(135deg,#0f172a,#0b1838_55%,#111c46)] p-6 shadow-[0_20px_40px_rgba(1,8,30,0.45)] sm:p-8">
-        <div className="pointer-events-none absolute -left-16 top-0 h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-0 h-44 w-44 rounded-full bg-indigo-400/20 blur-3xl" />
+    <div className="relative mx-auto max-w-7xl space-y-7 text-slate-900 dark:text-slate-100">
+      <div className="pointer-events-none absolute inset-0 -z-10 rounded-3xl bg-[radial-gradient(circle_at_top_left,rgba(69,98,255,0.08),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(120,90,255,0.08),transparent_38%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(69,98,255,0.15),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(120,90,255,0.12),transparent_38%)]" />
+      <header className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff,#eef4ff_55%,#ecf1ff)] p-6 shadow-[0_16px_34px_rgba(53,91,180,0.12)] dark:border-slate-800 dark:bg-[linear-gradient(135deg,#0f172a,#0b1838_55%,#111c46)] dark:shadow-[0_20px_40px_rgba(1,8,30,0.45)] sm:p-8">
+        <div className="pointer-events-none absolute -left-16 top-0 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl dark:bg-blue-500/20" />
+        <div className="pointer-events-none absolute right-0 top-0 h-44 w-44 rounded-full bg-indigo-400/10 blur-3xl dark:bg-indigo-400/20" />
         <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Tableau analytique</p>
-            <h1 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Statistiques systeme PKI</h1>
-            <p className="mt-2 text-sm text-slate-300">
-              Admin connecte: <span className="font-semibold text-slate-100">{user?.email ?? '-'}</span>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Tableau analytique</p>
+            <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white sm:text-3xl">Statistiques systeme PKI</h1>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Admin connecte: <span className="font-semibold text-slate-800 dark:text-slate-100">{user?.email ?? '-'}</span>
             </p>
           </div>
           <Link
             to="/admin/dashboard"
-            className="inline-flex items-center rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-blue-400/40 hover:text-white"
+            className="inline-flex items-center rounded-xl border border-slate-300 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-400/40 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:text-white"
           >
             Retour dashboard
           </Link>
@@ -210,12 +214,12 @@ export default function AdminStatsPage() {
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyChannels} barSize={30}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#24304f" vertical={false} />
-                <XAxis dataKey="month" stroke="#8ba2c7" tickLine={false} axisLine={false} />
-                <YAxis stroke="#8ba2c7" tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} vertical={false} />
+                <XAxis dataKey="month" stroke={chartAxis} tickLine={false} axisLine={false} />
+                <YAxis stroke={chartAxis} tickLine={false} axisLine={false} />
                 <Tooltip
                   cursor={{ fill: 'rgba(95, 125, 255, 0.12)' }}
-                  contentStyle={TOOLTIP_STYLE}
+                  contentStyle={tooltipStyle}
                 />
                 <Bar dataKey="direct" stackId="a" fill="#3f53ff" radius={[8, 8, 0, 0]} />
                 <Bar dataKey="referral" stackId="a" fill="#6078ff" />
@@ -247,12 +251,12 @@ export default function AdminStatsPage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={TOOLTIP_STYLE}
+                  contentStyle={tooltipStyle}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="-mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-slate-300">
+          <div className="-mt-5 flex flex-wrap items-center justify-center gap-4 text-sm text-slate-600 dark:text-slate-300">
             {deviceShare.map((entry) => (
               <div key={entry.name} className="inline-flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -268,21 +272,21 @@ export default function AdminStatsPage() {
         subtitle="Activite des 30 derniers jours"
         rightContent={
           <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/70 p-1 text-xs font-semibold text-slate-300">
-            <button className="rounded-lg border border-slate-600 bg-slate-700 px-3.5 py-1.5 text-white">Monthly</button>
-            <button className="px-3.5 py-1.5">Quarterly</button>
-            <button className="px-3.5 py-1.5">Annually</button>
+            <button className="rounded-lg border border-slate-300 bg-white px-3.5 py-1.5 text-slate-800 dark:border-slate-600 dark:bg-slate-700 dark:text-white">Monthly</button>
+            <button className="px-3.5 py-1.5 text-slate-600 dark:text-slate-300">Quarterly</button>
+            <button className="px-3.5 py-1.5 text-slate-600 dark:text-slate-300">Annually</button>
           </div>
         }
       >
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dailyActivity} barSize={14}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#24304f" vertical={false} />
-              <XAxis dataKey="day" stroke="#8ba2c7" tickLine={false} axisLine={false} />
-              <YAxis stroke="#8ba2c7" tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} vertical={false} />
+              <XAxis dataKey="day" stroke={chartAxis} tickLine={false} axisLine={false} />
+              <YAxis stroke={chartAxis} tickLine={false} axisLine={false} />
               <Tooltip
                 cursor={{ fill: 'rgba(95, 125, 255, 0.12)' }}
-                contentStyle={TOOLTIP_STYLE}
+                contentStyle={tooltipStyle}
               />
               <Bar dataKey="value" fill="#4d66ff" radius={[6, 6, 0, 0]} />
             </BarChart>
@@ -292,12 +296,12 @@ export default function AdminStatsPage() {
 
       <section className="grid gap-6 lg:grid-cols-3">
         <Panel title="Top channels" subtitle="Principales sources" rightContent={<div className="text-xl leading-none text-slate-500">...</div>}>
-          <div className="divide-y divide-slate-800">
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {sourceRows.map((row) => (
               <div key={row.source} className="flex items-center justify-between py-3 text-sm">
-                <span className="text-slate-200">{row.source}</span>
+                <span className="text-slate-700 dark:text-slate-200">{row.source}</span>
                 <div className="flex items-center gap-3">
-                  <span className="font-semibold text-slate-100">{formatCompact(row.visitors)}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{formatCompact(row.visitors)}</span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                       row.trend.startsWith('-') ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
@@ -309,7 +313,7 @@ export default function AdminStatsPage() {
               </div>
             ))}
           </div>
-          <button className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white">
+          <button className="mt-4 w-full rounded-xl border border-slate-300 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:text-white">
             Channels report
           </button>
         </Panel>
@@ -321,8 +325,8 @@ export default function AdminStatsPage() {
               <InfoLine label="Nom AC" value={dashboard.caStatus.caName || '-'} />
               <InfoLine label="Valide depuis" value={formatDate(dashboard.caStatus.validFrom)} />
               <InfoLine label="Expire le" value={formatDate(dashboard.caStatus.validUntil)} />
-              <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Expiration restante</p>
+              <div className="rounded-xl border border-slate-300 bg-white/70 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Expiration restante</p>
                 <p className={`mt-1 text-xl font-semibold ${caTone}`}>{daysRemaining ?? '-'} jours</p>
               </div>
             </div>
@@ -334,10 +338,10 @@ export default function AdminStatsPage() {
         </Panel>
 
         <Panel title="Active users" subtitle="Engagement moyen" rightContent={<div className="text-xl leading-none text-slate-500">...</div>}>
-          <div className="mb-2 flex items-center gap-3 rounded-xl bg-slate-900/50 px-3 py-2.5">
+          <div className="mb-2 flex items-center gap-3 rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-slate-900/50">
             <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.14)]" />
-            <span className="text-4xl font-semibold leading-none text-white">{formatCompact(safe.totalUsers + safe.activeCertificates)}</span>
-            <span className="text-slate-300">Live visitors</span>
+            <span className="text-4xl font-semibold leading-none text-slate-900 dark:text-white">{formatCompact(safe.totalUsers + safe.activeCertificates)}</span>
+            <span className="text-slate-600 dark:text-slate-300">Live visitors</span>
           </div>
           <div className="h-40 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -351,13 +355,13 @@ export default function AdminStatsPage() {
                 <XAxis hide dataKey="day" />
                 <YAxis hide />
                 <Tooltip
-                  contentStyle={TOOLTIP_STYLE}
+                  contentStyle={tooltipStyle}
                 />
                 <Area type="monotone" dataKey="value" stroke="#5f78ff" strokeWidth={2.5} fill="url(#activityGradient)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-3 border-t border-slate-800 pt-4 text-center">
+          <div className="mt-2 grid grid-cols-3 gap-3 border-t border-slate-200 pt-4 text-center dark:border-slate-800">
             <MiniStat label="Avg daily" value={Math.round(safe.totalUsers / 7)} />
             <MiniStat label="Avg weekly" value={Math.round(safe.activeCertificates * 1.4)} />
             <MiniStat label="Avg monthly" value={Math.round(safe.totalUsers * 1.8)} />
@@ -367,17 +371,17 @@ export default function AdminStatsPage() {
 
       <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Panel title="Customers demographic" subtitle="Repartition basee sur les comptes verifies" rightContent={<div className="text-xl leading-none text-slate-500">...</div>}>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
-            <div className="h-44 rounded-xl border border-slate-800 bg-[radial-gradient(circle_at_20%_40%,rgba(84,109,255,0.25),transparent_30%),radial-gradient(circle_at_60%_30%,rgba(102,186,255,0.20),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(116,94,255,0.2),transparent_35%),#0b1429]" />
+          <div className="rounded-2xl border border-slate-200 bg-white/65 p-4 dark:border-slate-800 dark:bg-slate-950/35">
+            <div className="h-44 rounded-xl border border-slate-200 bg-[radial-gradient(circle_at_20%_40%,rgba(84,109,255,0.20),transparent_30%),radial-gradient(circle_at_60%_30%,rgba(102,186,255,0.15),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(116,94,255,0.15),transparent_35%),#eef3ff] dark:border-slate-800 dark:bg-[radial-gradient(circle_at_20%_40%,rgba(84,109,255,0.25),transparent_30%),radial-gradient(circle_at_60%_30%,rgba(102,186,255,0.20),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(116,94,255,0.2),transparent_35%),#0b1429]" />
           </div>
           <div className="mt-4 space-y-3">
             {countryShares.map((item) => (
-              <div key={item.country} className="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+              <div key={item.country} className="rounded-xl border border-slate-200 bg-white/80 p-3 dark:border-slate-800 dark:bg-slate-900/50">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-slate-100">{item.country}</span>
-                  <span className="text-slate-300">{item.users} utilisateurs</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100">{item.country}</span>
+                  <span className="text-slate-600 dark:text-slate-300">{item.users} utilisateurs</span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                   <div className="h-full rounded-full bg-gradient-to-r from-[#4861ff] to-[#7f97ff]" style={{ width: `${item.rate}%` }} />
                 </div>
               </div>
@@ -386,9 +390,9 @@ export default function AdminStatsPage() {
         </Panel>
 
         <Panel title="Recent operations" subtitle="Dernieres activites critiques du systeme">
-          <div className="overflow-x-auto rounded-2xl border border-slate-800">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-900/70 text-slate-400">
+              <thead className="bg-slate-100 text-slate-600 dark:bg-slate-900/70 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Element</th>
                   <th className="px-4 py-3 text-left font-medium">Type</th>
@@ -396,7 +400,7 @@ export default function AdminStatsPage() {
                   <th className="px-4 py-3 text-left font-medium">Valeur</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 bg-slate-950/35 text-slate-200">
+              <tbody className="divide-y divide-slate-200 bg-white/65 text-slate-700 dark:divide-slate-800 dark:bg-slate-950/35 dark:text-slate-200">
                 <tr>
                   <td className="px-4 py-3">Demandes en attente</td>
                   <td className="px-4 py-3">Instruction</td>
@@ -442,10 +446,10 @@ function MetricCard({
   deltaPositive: boolean;
 }) {
   return (
-    <article className="rounded-2xl border border-slate-800 bg-[linear-gradient(145deg,#121c34,#101b39)] p-5 shadow-[0_10px_24px_rgba(3,9,33,0.45)]">
-      <p className="text-sm text-slate-300">{title}</p>
+    <article className="rounded-2xl border border-slate-200 bg-[linear-gradient(145deg,#ffffff,#eef3ff)] p-5 shadow-[0_8px_20px_rgba(65,94,170,0.14)] dark:border-slate-800 dark:bg-[linear-gradient(145deg,#121c34,#101b39)] dark:shadow-[0_10px_24px_rgba(3,9,33,0.45)]">
+      <p className="text-sm text-slate-600 dark:text-slate-300">{title}</p>
       <div className="mt-3 flex items-end justify-between">
-        <p className="text-3xl font-semibold text-white">{formatCompact(value)}</p>
+        <p className="text-3xl font-semibold text-slate-900 dark:text-white">{formatCompact(value)}</p>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             deltaPositive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
@@ -454,7 +458,7 @@ function MetricCard({
           {delta}
         </span>
       </div>
-      <p className="mt-2 text-sm text-slate-400">Vs last month</p>
+      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Vs last month</p>
     </article>
   );
 }
@@ -471,11 +475,11 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <article className="rounded-[24px] border border-slate-800 bg-[linear-gradient(140deg,#121b33,#111933_50%,#0d1730)] p-5 shadow-[0_18px_36px_rgba(2,8,29,0.4)] sm:p-6">
+    <article className="rounded-[24px] border border-slate-200 bg-[linear-gradient(140deg,#ffffff,#f4f7ff_50%,#eef3ff)] p-5 shadow-[0_14px_28px_rgba(53,91,180,0.12)] dark:border-slate-800 dark:bg-[linear-gradient(140deg,#121b33,#111933_50%,#0d1730)] dark:shadow-[0_18px_36px_rgba(2,8,29,0.4)] sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-xl font-semibold text-white">{title}</h3>
-          {subtitle ? <p className="mt-1 text-sm text-slate-400">{subtitle}</p> : null}
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-white">{title}</h3>
+          {subtitle ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p> : null}
         </div>
         {rightContent || null}
       </div>
@@ -486,9 +490,9 @@ function Panel({
 
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/55 px-3 py-2 text-sm">
-      <span className="text-slate-400">{label}</span>
-      <span className="max-w-[60%] text-right font-medium text-slate-100">{value}</span>
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/55">
+      <span className="text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="max-w-[60%] text-right font-medium text-slate-800 dark:text-slate-100">{value}</span>
     </div>
   );
 }
@@ -496,15 +500,15 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div className="text-xl font-semibold text-white">{formatCompact(value)}</div>
-      <div className="text-xs text-slate-400">{label}</div>
+      <div className="text-xl font-semibold text-slate-900 dark:text-white">{formatCompact(value)}</div>
+      <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
     </div>
   );
 }
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-2 text-slate-700 dark:text-slate-300">
       <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
       <span>{label}</span>
     </span>
