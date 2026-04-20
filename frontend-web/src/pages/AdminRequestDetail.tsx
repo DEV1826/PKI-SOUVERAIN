@@ -61,7 +61,9 @@ export default function AdminRequestDetail() {
     setBusy(true);
     setErrorMsg(null);
     try {
-      const resp = await adminService.approveRequest(id, validityDays);
+      const resp = isCsrSigningStep
+        ? await adminService.approveRequest(id, validityDays)
+        : await adminService.reviewApproveRequest(id);
       setPemText(resp?.certificate || null);
       setShowApproveModal(false);
       if (resp?.certificate) setShowPemModal(true);

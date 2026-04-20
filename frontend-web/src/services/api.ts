@@ -318,6 +318,11 @@ export const adminService = {
     return response.data;
   },
 
+  reviewApproveRequest: async (id: string): Promise<any> => {
+    const response = await apiClient.post(`/admin/certificate-requests/${id}/review-approve`);
+    return response.data;
+  },
+
   rejectRequest: async (id: string, reason?: string): Promise<any> => {
     const response = await apiClient.post(`/admin/certificate-requests/${id}/reject`, null, { params: { reason } });
     return response.data;
