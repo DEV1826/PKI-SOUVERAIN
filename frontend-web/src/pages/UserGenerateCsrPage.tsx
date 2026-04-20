@@ -1,22 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as tmImage from '@teachablemachine/image';
+import Button from '../components/Button';
 import { userService } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
-import Button from '../components/Button';
+
+type AiResult = { label: string; score: number; ok: boolean };
 
 export default function UserGenerateCsrPage() {
   const [step, setStep] = useState<1 | 2>(1);
-  const [files, setFiles] = useState<File[]>([]);
-  const [dragOver, setDragOver] = useState(false);
+  const [identityFiles, setIdentityFiles] = useState<File[]>([]);
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [dragOverIdentity, setDragOverIdentity] = useState(false);
+  const [dragOverSelfie, setDragOverSelfie] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [commonName, setCommonName] = useState<string>('');
-  const [organization, setOrganization] = useState<string>('');
-  const [organizationalUnit, setOrganizationalUnit] = useState<string>('');
-  const [locality, setLocality] = useState<string>('');
-  const [stateRegion, setStateRegion] = useState<string>('');
-  const [country, setCountry] = useState<string>('CM');
+
   const [emailAddr, setEmailAddr] = useState<string>('');
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
@@ -26,18 +25,20 @@ export default function UserGenerateCsrPage() {
   const [identityDocumentType, setIdentityDocumentType] = useState<string>('CNI');
   const [identityDocumentNumber, setIdentityDocumentNumber] = useState<string>('');
   const [identityDocumentExpiry, setIdentityDocumentExpiry] = useState<string>('');
+
   const [aiModel, setAiModel] = useState<tmImage.CustomMobileNet | null>(null);
   const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [aiError, setAiError] = useState<string | null>(null);
-  const [aiResults, setAiResults] = useState<Record<string, { label: string; score: number; ok: boolean }>>({});
+  const [aiResults, setAiResults] = useState<Record<string, AiResult>>({});
+
   const aiRequestIdRef = useRef(0);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const identityInputRef = useRef<HTMLInputElement | null>(null);
+  const selfieInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     setError(null);
-    setCommonName((user?.firstName + ' ' + user?.lastName) || '');
     setEmailAddr(user?.email || '');
     setFirstName(user?.firstName || '');
     setLastName(user?.lastName || '');
@@ -45,6 +46,7 @@ export default function UserGenerateCsrPage() {
 
   useEffect(() => {
     let cancelled = false;
+
     const loadModel = async () => {
       setAiStatus('loading');
       setAiError(null);
@@ -53,13 +55,15 @@ export default function UserGenerateCsrPage() {
         if (cancelled) return;
         setAiModel(model);
         setAiStatus('ready');
-      } catch (e) {
+      } catch {
         if (cancelled) return;
         setAiStatus('error');
         setAiError("Le modele IA n'a pas pu etre charge.");
       }
     };
+
     loadModel();
+
     return () => {
       cancelled = true;
     };
@@ -82,39 +86,44 @@ export default function UserGenerateCsrPage() {
       img.src = url;
     });
 
-  const validateWithAi = async (file: File) => {
+  const validateWithAi = async (file: File): Promise<AiResult> => {
     if (!aiModel) throw new Error('Modele non disponible');
+
     const img = await loadImage(file);
     const predictions: tmImage.Prediction[] = await aiModel.predict(img);
     const best = predictions.reduce<tmImage.Prediction>(
-      (acc, cur) => (cur.probability > acc.probability ? cur : acc),
+      (acc: tmImage.Prediction, cur: tmImage.Prediction) => (cur.probability > acc.probability ? cur : acc),
       predictions[0]
     );
+
     const label = best?.className || 'UNKNOWN';
     const score = best?.probability ?? 0;
     const normalized = label.toLowerCase();
     const isAllowed = ['cni', 'passport', 'passeport'].some((v) => normalized.includes(v));
     const ok = isAllowed && score >= 0.8;
+
     return { label, score, ok };
   };
 
-  const onFiles = useCallback(
+  const onIdentityFiles = useCallback(
     async (selected: FileList | null) => {
       if (!selected) return;
       if (aiStatus !== 'ready' || !aiModel) {
         setError("Le modele IA est en cours de chargement. Reessayez dans quelques secondes.");
         return;
       }
+
       setError(null);
       const arr = Array.from(selected);
-      const allowed = arr.filter((f) => /png|jpe?g/.test(f.type));
-      const rejected = arr.filter((f) => !/png|jpe?g/.test(f.type)).map((f) => f.name);
-      if (rejected.length) {
+      const allowed = arr.filter((f) => /^image\//.test(f.type));
+      const rejected = arr.filter((f) => !/^image\//.test(f.type)).map((f) => f.name);
+
+      if (rejected.length > 0) {
         setError(`Format non pris en charge: ${rejected.join(', ')}`);
       }
 
       const requestId = ++aiRequestIdRef.current;
-      const nextResults: Record<string, { label: string; score: number; ok: boolean }> = {};
+      const nextResults: Record<string, AiResult> = {};
       const accepted: File[] = [];
       const invalid: string[] = [];
 
@@ -122,8 +131,11 @@ export default function UserGenerateCsrPage() {
         try {
           const result = await validateWithAi(file);
           nextResults[fileKey(file)] = result;
-          if (result.ok) accepted.push(file);
-          else invalid.push(file.name);
+          if (result.ok) {
+            accepted.push(file);
+          } else {
+            invalid.push(file.name);
+          }
         } catch {
           nextResults[fileKey(file)] = { label: 'UNKNOWN', score: 0, ok: false };
           invalid.push(file.name);
@@ -131,30 +143,34 @@ export default function UserGenerateCsrPage() {
       }
 
       if (requestId !== aiRequestIdRef.current) return;
+
       setAiResults((prev) => ({ ...prev, ...nextResults }));
-      if (invalid.length) {
+      if (invalid.length > 0) {
         setError(`Seules les pieces d'identite CNI/Passeport sont acceptees. Fichiers non valides: ${invalid.join(', ')}`);
       }
-      setFiles((prev) => [...prev, ...accepted].slice(0, 5));
+      setIdentityFiles((prev) => [...prev, ...accepted].slice(0, 5));
     },
     [aiModel, aiStatus]
   );
 
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragOver(false);
-      onFiles(e.dataTransfer.files);
-    },
-    [onFiles]
-  );
+  const onSelfieFiles = useCallback((selected: FileList | null) => {
+    if (!selected || selected.length === 0) return;
 
-  const onBrowse = () => fileInputRef.current?.click();
+    const file = selected[0];
+    if (!/^image\//.test(file.type)) {
+      setError('La photo visage doit etre une image.');
+      return;
+    }
 
-  const removeFile = (idx: number) =>
-    setFiles((prev) => {
+    setError(null);
+    setSelfieFile(file);
+  }, []);
+
+  const removeIdentityFile = (idx: number) => {
+    setIdentityFiles((prev) => {
       const next = prev.filter((_, i) => i !== idx);
       const removed = prev[idx];
+
       if (removed) {
         setAiResults((curr) => {
           const copy = { ...curr };
@@ -162,25 +178,33 @@ export default function UserGenerateCsrPage() {
           return copy;
         });
       }
+
       return next;
     });
+  };
+
+  const clearSelfie = () => setSelfieFile(null);
 
   const validateStep1 = () => {
     if (!firstName.trim()) return 'Le prenom est requis';
     if (!lastName.trim()) return 'Le nom est requis';
+    if (!birthDate.trim()) return 'La date de naissance est requise';
+    if (!birthPlace.trim()) return 'Le lieu de naissance est requis';
     if (!identityDocumentNumber.trim()) return 'Le numero de piece est requis';
-    if (!identityDocumentExpiry.trim()) return "La date d'expiration est requise";
+    if (!identityDocumentExpiry.trim()) return "La date d'expiration de la piece est requise";
     if (!nationality.trim() || !/^[A-Za-z]{2}$/.test(nationality.trim())) return 'La nationalite doit etre un code ISO 2 lettres';
-    if (!commonName.trim()) return 'Le Common Name (CN) est requis';
-    if (!organization.trim()) return "L'organisation (O) est requise";
-    if (!locality.trim()) return 'La ville (L) est requise';
-    if (!country.trim() || !/^[A-Za-z]{2}$/.test(country.trim())) return 'Le pays (C) doit etre un code ISO 2 lettres';
-    if (!emailAddr.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailAddr.trim().toLowerCase())) return 'Un email valide est requis';
+
+    const normalizedEmail = emailAddr.trim().toLowerCase();
+    if (!normalizedEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail)) {
+      return 'Un email valide est requis';
+    }
+
     return null;
   };
 
   const goNext = () => {
     setError(null);
+
     if (step === 1) {
       const validation = validateStep1();
       if (validation) {
@@ -188,46 +212,65 @@ export default function UserGenerateCsrPage() {
         return;
       }
       setStep(2);
-      return;
-    }
-    if (step === 2) {
-      if (files.length === 0) {
-        setError("Veuillez ajouter au moins une piece d'identite avant de continuer.");
-        return;
-      }
     }
   };
 
   const goPrevious = () => {
     setError(null);
-    setStep((prev) => (prev === 1 ? 1 : ((prev - 1) as 1 | 2)));
+    setStep(1);
   };
 
   const onSubmit = async () => {
     setError(null);
+
     const validation = validateStep1();
-    if (validation) return setError(validation);
-    if (files.length === 0) return setError("Veuillez ajouter au moins une piece d'identite.");
+    if (validation) {
+      setError(validation);
+      return;
+    }
+
+    if (identityFiles.length === 0) {
+      setError("Veuillez ajouter au moins une piece d'identite.");
+      return;
+    }
+
+    if (!selfieFile) {
+      setError('Une photo visage est obligatoire pour la verification d\'identite.');
+      return;
+    }
 
     setSubmitting(true);
+
     try {
+      const normalizedFirstName = firstName.trim();
+      const normalizedLastName = lastName.trim();
+      const normalizedDocType = identityDocumentType.trim().toUpperCase();
+      const normalizedDocNumber = identityDocumentNumber.trim();
+      const normalizedNationality = nationality.trim().toUpperCase();
+
       const form = new FormData();
-      form.append('commonName', commonName);
-      form.append('organization', organization || '');
-      form.append('organizationalUnit', organizationalUnit || '');
-      form.append('locality', locality || '');
-      form.append('state', stateRegion || '');
-      form.append('country', country || '');
-      form.append('email', emailAddr.trim().toLowerCase());
-      form.append('firstName', firstName.trim());
-      form.append('lastName', lastName.trim());
-      if (birthDate.trim()) form.append('birthDate', birthDate.trim());
-      if (birthPlace.trim()) form.append('birthPlace', birthPlace.trim());
-      form.append('nationality', nationality.trim().toUpperCase());
-      form.append('identityDocumentType', identityDocumentType.trim().toUpperCase());
-      form.append('identityDocumentNumber', identityDocumentNumber.trim());
+      form.append('firstName', normalizedFirstName);
+      form.append('lastName', normalizedLastName);
+      form.append('birthDate', birthDate.trim());
+      form.append('birthPlace', birthPlace.trim());
+      form.append('nationality', normalizedNationality);
+      form.append('identityDocumentType', normalizedDocType);
+      form.append('identityDocumentNumber', normalizedDocNumber);
       form.append('identityDocumentExpiry', identityDocumentExpiry.trim());
-      files.forEach((f) => form.append('documents', f));
+      form.append('email', emailAddr.trim().toLowerCase());
+
+      // Champs X.509 derives pour rester compatible backend, sans exposer ce formulaire a l'utilisateur ici.
+      form.append('commonName', `${normalizedFirstName} ${normalizedLastName}`.trim());
+      form.append('organization', `DETENTEUR_${normalizedDocType}`);
+      form.append('organizationalUnit', `DOC:${normalizedDocType}-${normalizedDocNumber}`);
+      form.append('locality', birthPlace.trim());
+      form.append('state', '-');
+      form.append('country', normalizedNationality);
+
+      identityFiles.forEach((f) => form.append('documents', f));
+      form.append('documents', selfieFile, `selfie_${selfieFile.name}`);
+      form.append('livePhotoProvided', 'true');
+
       await userService.submitCertificateRequest(form);
       navigate('/requests');
     } catch (err: any) {
@@ -242,11 +285,11 @@ export default function UserGenerateCsrPage() {
       <div className="mb-6 rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
         <h1 className="mb-2 text-h3 font-semibold dark:text-neutral-100">Nouvelle demande</h1>
         <div className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
-          Etape {step}/2 - {step === 1 ? 'Informations personnelles' : "Piece d'identite"}
+          Etape {step}/2 - {step === 1 ? 'Informations personnelles' : "Piece d'identite + photo visage"}
         </div>
         <div className="mb-2 grid grid-cols-2 gap-2">
-          <StepBadge active={step === 1} done={step > 1} label="1. Infos" />
-          <StepBadge active={step === 2} done={false} label="2. Identite" />
+          <StepBadge active={step === 1} done={step > 1} label="1. Infos personnelles" />
+          <StepBadge active={step === 2} done={false} label="2. Identite + Selfie" />
         </div>
       </div>
 
@@ -254,103 +297,178 @@ export default function UserGenerateCsrPage() {
         <div className="mb-6 rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
           <h2 className="mb-3 text-h3 font-semibold dark:text-neutral-100">Informations personnelles</h2>
           <div className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
-            Renseignez les informations telles qu'elles figurent sur votre piece d'identite.
+            Renseignez les informations exactement comme sur la piece d'identite ou le passeport.
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Prenom *" value={firstName} onChange={setFirstName} placeholder="Prenom" />
             <Field label="Nom *" value={lastName} onChange={setLastName} placeholder="Nom" />
-            <Field label="Date de naissance" value={birthDate} onChange={setBirthDate} placeholder="YYYY-MM-DD" />
-            <Field label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Ville" />
+            <Field label="Date de naissance *" value={birthDate} onChange={setBirthDate} placeholder="YYYY-MM-DD" type="date" />
+            <Field label="Lieu de naissance *" value={birthPlace} onChange={setBirthPlace} placeholder="Ville" />
             <Field label="Nationalite (ISO) *" value={nationality} onChange={(v) => setNationality(v.toUpperCase())} placeholder="CM" />
-            <Field label="Type de piece *" value={identityDocumentType} onChange={(v) => setIdentityDocumentType(v.toUpperCase())} placeholder="CNI" />
+
+            <label className="flex flex-col">
+              <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">Type de piece *</span>
+              <select
+                value={identityDocumentType}
+                onChange={(e) => setIdentityDocumentType(e.target.value)}
+                className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+              >
+                <option value="CNI">CNI</option>
+                <option value="PASSEPORT">Passeport</option>
+                <option value="CARTE_SEJOUR">Carte de sejour</option>
+              </select>
+            </label>
+
             <Field label="Numero de piece *" value={identityDocumentNumber} onChange={setIdentityDocumentNumber} placeholder="123456789" />
-            <Field label="Expiration piece *" value={identityDocumentExpiry} onChange={setIdentityDocumentExpiry} placeholder="YYYY-MM-DD" />
-            <Field label="Common Name (CN) *" value={commonName} onChange={setCommonName} placeholder="Japhet Fadil" help="Votre nom complet tel qu'il apparaitra sur le certificat" />
-            <Field label="Organisation (O) *" value={organization} onChange={setOrganization} placeholder="Ministere de l'Interieur" />
-            <Field label="Unite Organisationnelle (OU)" value={organizationalUnit} onChange={setOrganizationalUnit} placeholder="Direction des Systemes d'Information" />
-            <Field label="Ville (L) *" value={locality} onChange={setLocality} placeholder="Yaounde" />
-            <Field label="Region / Etat (ST)" value={stateRegion} onChange={setStateRegion} placeholder="Centre" />
-            <Field label="Pays (C) *" value={country} onChange={(v) => setCountry(v.toUpperCase())} placeholder="CM" help="Code pays ISO 3166-1 (2 lettres)" />
-            <Field label="Email *" value={emailAddr} onChange={setEmailAddr} placeholder="japhet.fadil@organisation.fr" wide />
+            <Field
+              label="Expiration piece *"
+              value={identityDocumentExpiry}
+              onChange={setIdentityDocumentExpiry}
+              placeholder="YYYY-MM-DD"
+              type="date"
+            />
+            <Field label="Email de contact *" value={emailAddr} onChange={setEmailAddr} placeholder="nom@domaine.com" wide />
           </div>
         </div>
       )}
 
       {step === 2 && (
-        <div className="mb-6 rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
-          <h2 className="mb-2 text-h3 font-semibold dark:text-neutral-100">Piece d'identite</h2>
-          <div className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
-            Importez votre piece d'identite (CNI ou passeport). Seules les images sont acceptees.
-          </div>
-          <div className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-            IA: {aiStatus === 'loading' ? 'chargement du modele...' : aiStatus === 'ready' ? 'active (CNI/Passeport)' : 'indisponible'}
-            {aiError ? ` - ${aiError}` : ''}
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
+            <h2 className="mb-2 text-h3 font-semibold dark:text-neutral-100">Piece d'identite (obligatoire)</h2>
+            <div className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
+              Importez votre piece d'identite (CNI/Passeport). Validation IA active.
+            </div>
+            <div className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+              IA: {aiStatus === 'loading' ? 'chargement du modele...' : aiStatus === 'ready' ? 'active (CNI/Passeport)' : 'indisponible'}
+              {aiError ? ` - ${aiError}` : ''}
+            </div>
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverIdentity(true);
+              }}
+              onDragLeave={() => setDragOverIdentity(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverIdentity(false);
+                onIdentityFiles(e.dataTransfer.files);
+              }}
+              className={`rounded-lg border-2 p-10 text-center ${
+                dragOverIdentity
+                  ? 'border-dashed border-primary-600 bg-primary-50 dark:bg-primary-950/30'
+                  : 'border-dashed border-neutral-300 dark:border-neutral-700'
+              }`}
+            >
+              <div className="font-semibold dark:text-neutral-100">Glissez-deposez vos pieces ici</div>
+              <div className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">
+                ou{' '}
+                <button className="text-primary-700 underline dark:text-primary-300" onClick={() => identityInputRef.current?.click()}>
+                  cliquez pour selectionner
+                </button>
+              </div>
+              <div className="mt-2 flex justify-center">
+                <Button variant="secondary" onClick={() => identityInputRef.current?.click()}>Parcourir les fichiers</Button>
+              </div>
+              <input
+                ref={identityInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => onIdentityFiles(e.target.files)}
+                accept="image/*"
+              />
+            </div>
+
+            {identityFiles.length > 0 && (
+              <div className="mt-4">
+                <ul className="space-y-2">
+                  {identityFiles.map((f, idx) => {
+                    const result = aiResults[fileKey(f)];
+                    return (
+                      <li key={fileKey(f)} className="flex items-center justify-between rounded bg-neutral-50 p-3 dark:bg-neutral-800">
+                        <div className="text-sm dark:text-neutral-200">
+                          {f.name} <span className="text-xs text-neutral-400 dark:text-neutral-500">({Math.round(f.size / 1024)} KB)</span>
+                          {result && (
+                            <span
+                              className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+                                result.ok
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                              }`}
+                            >
+                              {result.label} - {Math.round(result.score * 100)}%
+                            </span>
+                          )}
+                        </div>
+                        <button className="text-sm text-red-600" onClick={() => removeIdentityFile(idx)}>
+                          Supprimer
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
 
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            className={`rounded-lg border-2 p-12 text-center ${
-              dragOver
-                ? 'border-dashed border-primary-600 bg-primary-50 dark:bg-primary-950/30'
-                : 'border-dashed border-neutral-300 dark:border-neutral-700'
-            }`}
-          >
-            <div className="font-semibold dark:text-neutral-100">Glissez-deposez vos fichiers ici</div>
-            <div className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">
-              ou{' '}
-              <button className="text-primary-700 underline dark:text-primary-300" onClick={onBrowse}>
-                cliquez pour selectionner
-              </button>
+          <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
+            <h2 className="mb-2 text-h3 font-semibold dark:text-neutral-100">Photo visage / preuve de vie (obligatoire)</h2>
+            <div className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
+              Ajoutez une photo recente de votre visage pour l'authentification faciale.
             </div>
-            <div className="mt-2 flex justify-center">
-              <Button variant="secondary" onClick={onBrowse}>Parcourir les fichiers</Button>
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverSelfie(true);
+              }}
+              onDragLeave={() => setDragOverSelfie(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverSelfie(false);
+                onSelfieFiles(e.dataTransfer.files);
+              }}
+              className={`rounded-lg border-2 p-8 text-center ${
+                dragOverSelfie
+                  ? 'border-dashed border-primary-600 bg-primary-50 dark:bg-primary-950/30'
+                  : 'border-dashed border-neutral-300 dark:border-neutral-700'
+              }`}
+            >
+              <div className="font-semibold dark:text-neutral-100">Deposez votre selfie ici</div>
+              <div className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">
+                ou{' '}
+                <button className="text-primary-700 underline dark:text-primary-300" onClick={() => selfieInputRef.current?.click()}>
+                  cliquez pour selectionner
+                </button>
+              </div>
+              <div className="mt-2 flex justify-center">
+                <Button variant="secondary" onClick={() => selfieInputRef.current?.click()}>Choisir une photo</Button>
+              </div>
+              <input ref={selfieInputRef} type="file" className="hidden" onChange={(e) => onSelfieFiles(e.target.files)} accept="image/*" />
             </div>
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} accept="image/*" />
+
+            {selfieFile && (
+              <div className="mt-4 flex items-center justify-between rounded bg-neutral-50 p-3 dark:bg-neutral-800">
+                <div className="text-sm dark:text-neutral-200">
+                  {selfieFile.name} <span className="text-xs text-neutral-400 dark:text-neutral-500">({Math.round(selfieFile.size / 1024)} KB)</span>
+                </div>
+                <button className="text-sm text-red-600" onClick={clearSelfie}>
+                  Supprimer
+                </button>
+              </div>
+            )}
           </div>
 
-          {files.length > 0 && (
-            <div className="mt-4">
-              <ul className="space-y-2">
-                {files.map((f, idx) => (
-                  <li key={idx} className="flex items-center justify-between rounded bg-neutral-50 p-3 dark:bg-neutral-800">
-                    <div className="text-sm dark:text-neutral-200">
-                      {f.name} <span className="text-xs text-neutral-400 dark:text-neutral-500">({Math.round(f.size / 1024)} KB)</span>
-                      {aiResults[fileKey(f)] && (
-                        <span
-                          className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
-                            aiResults[fileKey(f)].ok
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                          }`}
-                        >
-                          {aiResults[fileKey(f)].label} - {Math.round(aiResults[fileKey(f)].score * 100)}%
-                        </span>
-                      )}
-                    </div>
-                    <button className="text-sm text-red-600" onClick={() => removeFile(idx)}>
-                      Supprimer
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="rounded-2xl border border-neutral-100 bg-white p-4 text-sm text-neutral-600 shadow dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+            Apres validation admin de votre identite, vous recevrez la main pour soumettre le CSR depuis la page "Suivi de mes demandes".
+          </div>
         </div>
       )}
 
-      {step === 2 && (
-        <div className="mb-4 rounded-2xl border border-neutral-100 bg-white p-4 text-sm text-neutral-600 shadow dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
-          Apres verification admin, vous pourrez soumettre la CSR depuis la page "Suivi de mes demandes".
-        </div>
-      )}
-
-      <div className="flex flex-wrap justify-end gap-3">
+      <div className="mt-6 flex flex-wrap justify-end gap-3">
         <Button variant="secondary" onClick={() => navigate('/dashboard')}>
           Annuler
         </Button>
@@ -400,26 +518,26 @@ function Field({
   value,
   onChange,
   placeholder,
-  help,
   wide = false,
+  type = 'text',
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
-  help?: string;
   wide?: boolean;
+  type?: 'text' | 'date' | 'email';
 }) {
   return (
     <label className={`flex flex-col ${wide ? 'md:col-span-2' : ''}`}>
       <span className="mb-1 text-xs text-neutral-500 dark:text-neutral-400">{label}</span>
       <input
+        type={type}
         className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
       />
-      {help && <div className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">{help}</div>}
     </label>
   );
 }
