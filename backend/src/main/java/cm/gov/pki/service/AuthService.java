@@ -107,9 +107,9 @@ public class AuthService {
             user.setRole(User.UserRole.USER);
         }
 
-        // Mise à jour last login
-        user.setLastLogin(LocalDateTime.now());
-        userRepository.save(user);
+        LocalDateTime loginAt = LocalDateTime.now();
+        updateLastLoginWithRetry(user.getId(), loginAt);
+        user.setLastLogin(loginAt);
 
         auditService.log(user, "USER_LOGIN", "User", user.getId(), null);
 
@@ -195,6 +195,47 @@ public class AuthService {
     /**
      * Clé de signature JWT
      */
+    private void updateLastLoginWithRetry(UUID userId, LocalDateTime loginAt) {
+        final int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                userRepository.touchLastLogin(userId, loginAt);
+                return;
+            } catch (org.springframework.dao.CannotAcquireLockException
+                     | org.springframework.dao.DeadlockLoserDataAccessException ex) {
+                if (attempt == maxAttempts) {
+                    log.warn("lastLogin update skipped after deadlock for user {}", userId);
+                    return;
+                }
+                try {
+                    Thread.sleep(120L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            } catch (org.springframework.dao.DataAccessException ex) {
+                Throwable root = ex.getMostSpecificCause();
+                String sqlState = null;
+                if (root instanceof java.sql.SQLException sqlEx) {
+                    sqlState = sqlEx.getSQLState();
+                }
+                if (!"40P01".equals(sqlState)) {
+                    throw ex;
+                }
+                if (attempt == maxAttempts) {
+                    log.warn("lastLogin update skipped after SQL deadlock for user {}", userId);
+                    return;
+                }
+                try {
+                    Thread.sleep(120L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }
+    }
+
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
