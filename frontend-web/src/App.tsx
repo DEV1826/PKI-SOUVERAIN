@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import NotificationBell from './components/NotificationBell';
 import Sidebar from './components/Sidebar';
 import ThemeToggle from './components/ThemeToggle';
@@ -23,6 +24,7 @@ import UserDownloadCrlPage from './pages/UserDownloadCrlPage';
 import UserGenerateCsrPage from './pages/UserGenerateCsrPage';
 import UserRevokeCertificatePage from './pages/UserRevokeCertificatePage';
 import UserValidateTokenPage from './pages/UserValidateTokenPage';
+import UserCsrPhasePage from './pages/UserCsrPhasePage';
 import { AdminRequestDetail, AdminRequestsList, UserRequestsPage } from './pages';
 import { userService } from './services/api';
 import { useAuthStore } from './stores/authStore';
@@ -58,7 +60,11 @@ function useHydrateAuth() {
     userService
       .getMe()
       .then((user) => setUser(user))
-      .catch(() => setUser(null))
+      .catch(() => {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        setUser(null);
+      })
       .finally(() => setLoading(false));
   }, [setLoading, setUser]);
 }
@@ -104,18 +110,14 @@ function App() {
           <Route
             element={
               <ProtectedRoute>
-                <div className="flex min-h-screen">
-                  <Sidebar />
-                  <main className="flex-1 bg-neutral-50 p-8 dark:bg-neutral-950">
-                    <Outlet />
-                  </main>
-                </div>
+                <ProtectedLayout />
               </ProtectedRoute>
             }
           >
             <Route path="/dashboard" element={<DashboardUserPage />} />
             <Route path="/certificates" element={<UserCertificatesPage />} />
             <Route path="/generate-csr" element={<UserGenerateCsrPage />} />
+            <Route path="/phase-3-csr" element={<UserCsrPhasePage />} />
             <Route path="/requests" element={<UserRequestsPage />} />
             <Route path="/revoke-certificate" element={<UserRevokeCertificatePage />} />
             <Route path="/download-crl" element={<UserDownloadCrlPage />} />
@@ -151,6 +153,39 @@ function ProtectedRoute({ children, adminOnly = false }: any) {
   }
 
   return children;
+}
+
+function ProtectedLayout() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950">
+      {mobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          aria-label="Fermer le menu"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+
+      <main className="w-full flex-1 p-4 pt-16 dark:bg-neutral-950 md:p-8 md:pt-8">
+        <div className="mb-4 md:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          >
+            <Menu size={16} />
+            Menu
+          </button>
+        </div>
+        <Outlet />
+      </main>
+    </div>
+  );
 }
 
 export default App;

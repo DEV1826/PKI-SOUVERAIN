@@ -16,12 +16,14 @@ import {
   Shield,
   User,
   UserCog,
+  X,
 } from 'lucide-react';
 
 const userLinks = [
   { to: '/dashboard', label: 'Tableau de bord', icon: LayoutGrid },
   { to: '/certificates', label: 'Mes certificats', icon: Award },
   { to: '/generate-csr', label: 'Nouvelle demande', icon: FileText },
+  { to: '/phase-3-csr', label: 'Phase 3 - CSR', icon: FileText },
   { to: '/requests', label: 'Suivi de demande', icon: CheckSquare },
   { to: '/revoke-certificate', label: 'Revoquer certificat', icon: XCircle },
   { to: '/download-crl', label: 'Telecharger CRL', icon: Download },
@@ -38,13 +40,19 @@ const adminLinks = [
   { to: '/admin/download-crl', label: 'Telecharger CRL', icon: Download },
 ];
 
-export default function Sidebar() {
+type SidebarProps = {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+};
+
+export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const { user } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const links = user?.role === 'ADMIN' ? adminLinks : userLinks;
 
   const handleLogout = () => {
+    onClose?.();
     useAuthStore.getState().logout();
     navigate('/login', { replace: true });
   };
@@ -52,7 +60,22 @@ export default function Sidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <aside className="flex min-h-screen w-64 flex-col border-r border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <aside
+      className={clsx(
+        'fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-neutral-200 bg-white p-4 shadow-xl transition-transform duration-300 dark:border-neutral-800 dark:bg-neutral-900 md:static md:min-h-screen md:w-64 md:translate-x-0 md:p-6 md:shadow-sm',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      )}
+    >
+      <div className="mb-4 flex items-center justify-end md:hidden">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg border border-neutral-300 p-2 text-neutral-700 dark:border-neutral-700 dark:text-neutral-200"
+          aria-label="Fermer le menu"
+        >
+          <X size={18} />
+        </button>
+      </div>
       <div className="mb-8 flex items-center space-x-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700">
           <Shield className="h-6 w-6 text-white" />
@@ -87,6 +110,7 @@ export default function Sidebar() {
             <Link
               key={link.to}
               to={link.to}
+              onClick={onClose}
               className={clsx(
                 'flex items-center space-x-3 rounded-lg px-4 py-3 transition-all duration-200',
                 active

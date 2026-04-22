@@ -35,11 +35,13 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: any) => response,
   async (error: any) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
       // Token expirÃ© : redirection vers login
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      window.location.href = '/login';
+      if (!window.location.hash.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
