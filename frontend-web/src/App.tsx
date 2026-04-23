@@ -35,6 +35,18 @@ function useHydrateAuth() {
   const setLoading = useAuthStore((s) => s.setLoading);
 
   useEffect(() => {
+    const tokenExpired = (token: string) => {
+      try {
+        const payload = token.split('.')[1];
+        if (!payload) return true;
+        const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        if (!json?.exp) return false;
+        return Date.now() >= json.exp * 1000;
+      } catch {
+        return true;
+      }
+    };
+
     const hashPath = (window.location.hash || '').replace(/^#/, '');
     const isPublicRoute =
       hashPath === '/' ||
@@ -49,7 +61,7 @@ function useHydrateAuth() {
     }
 
     const token = localStorage.getItem('accessToken');
-    if (!token || token === 'undefined' || token === 'null') {
+    if (!token || token === 'undefined' || token === 'null' || tokenExpired(token)) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       setLoading(false);

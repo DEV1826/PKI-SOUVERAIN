@@ -281,13 +281,13 @@ export default function UserGenerateCsrPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl py-8">
+    <div className="mx-auto max-w-4xl py-4 sm:py-8">
       <div className="mb-6 rounded-2xl border border-neutral-100 bg-white p-6 shadow dark:border-neutral-800 dark:bg-neutral-900">
         <h1 className="mb-2 text-h3 font-semibold dark:text-neutral-100">Nouvelle demande</h1>
         <div className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
           Etape {step}/2 - {step === 1 ? 'Informations personnelles' : "Piece d'identite + photo visage"}
         </div>
-        <div className="mb-2 grid grid-cols-2 gap-2">
+        <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <StepBadge active={step === 1} done={step > 1} label="1. Infos personnelles" />
           <StepBadge active={step === 2} done={false} label="2. Identite + Selfie" />
         </div>

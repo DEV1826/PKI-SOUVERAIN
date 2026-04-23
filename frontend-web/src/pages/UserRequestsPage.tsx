@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { userService } from '../services/api';
 
 interface RequestDocument {
@@ -120,6 +121,11 @@ export default function UserRequestsPage() {
                   <div className="text-sm font-semibold text-primary-800 dark:text-primary-300">Soumettre le CSR</div>
                   <div className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                     L admin a valide votre identite. Vous pouvez maintenant envoyer votre CSR.
+                  </div>
+                  <div className="mt-3">
+                    <Link to="/phase-3-csr" className="text-xs font-semibold text-primary-700 underline dark:text-primary-300">
+                      Ouvrir la page Phase 3
+                    </Link>
                   </div>
                   <textarea
                     className="mt-3 h-28 w-full rounded-lg border border-neutral-200 bg-white p-3 text-xs shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"

@@ -19,7 +19,7 @@ export default function DashboardUserPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8 dark:bg-neutral-950">
+    <div className="bg-neutral-50 py-4 dark:bg-neutral-950 sm:py-8">
       <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -47,7 +47,7 @@ export default function DashboardUserPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-center dark:border-neutral-800 dark:bg-neutral-950">
                 <div className="text-xs text-neutral-500 dark:text-neutral-400">Certificats</div>
                 <div className="text-h3 font-semibold text-[var(--text-strong)] dark:text-neutral-100">{certificates.length}</div>
@@ -61,6 +61,9 @@ export default function DashboardUserPage() {
             <div className="mt-6 grid gap-2">
               <Link to="/generate-csr">
                 <Button className="w-full">Nouvelle demande</Button>
+              </Link>
+              <Link to="/phase-3-csr">
+                <Button variant="secondary" className="w-full">Phase 3 - CSR</Button>
               </Link>
               <Link to="/requests">
                 <Button variant="secondary" className="w-full">Suivi des demandes</Button>

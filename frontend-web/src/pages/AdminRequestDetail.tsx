@@ -124,14 +124,14 @@ export default function AdminRequestDetail() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-h4 font-bold dark:text-neutral-100">Demande {request.id}</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="break-all text-h4 font-bold dark:text-neutral-100">Demande {request.id}</h1>
         <button className="rounded bg-neutral-100 px-3 py-2 dark:bg-neutral-800 dark:text-neutral-200" onClick={() => navigate('/admin/requests')}>
           Retour
         </button>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-6">
+      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <div className="rounded border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
           <h2 className="mb-2 font-semibold dark:text-neutral-100">Informations utilisateur</h2>
           <div className="dark:text-neutral-300"><strong>Utilisateur:</strong> {request.userFullName || request.userEmail || request.userId}</div>
@@ -194,8 +194,8 @@ export default function AdminRequestDetail() {
       <div className="mb-6 rounded border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h2 className="mb-2 font-semibold dark:text-neutral-100">Actions administrateur</h2>
         {isIdentityReviewStep || isCsrSigningStep ? (
-          <div className="flex items-center gap-4">
-            <div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div className="w-full lg:w-auto">
               <label className="block text-sm dark:text-neutral-300">Validite (jours)</label>
               <input
                 type="number"
@@ -208,12 +208,12 @@ export default function AdminRequestDetail() {
             <button className="rounded bg-green-600 px-4 py-2 text-white" onClick={() => setShowApproveModal(true)}>
               {approveActionLabel}
             </button>
-            <div className="ml-6">
+            <div className="w-full lg:ml-2">
               <label className="block text-sm dark:text-neutral-300">Raison du rejet</label>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="h-20 w-80 rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                className="h-20 w-full rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 lg:max-w-xl"
               />
               <div className="mt-2">
                 <button className="rounded bg-red-600 px-4 py-2 text-white" onClick={() => setShowRejectModal(true)}>

@@ -61,7 +61,7 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input label="Prenom" value={firstName} onChange={setFirstName} icon={<User size={18} />} required />
               <Input label="Nom" value={lastName} onChange={setLastName} icon={<User size={18} />} required />
             </div>

@@ -84,22 +84,22 @@ export default function AdminManageUsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
-      <header className="border-b bg-white p-4 shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-start justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-neutral-950 dark:to-neutral-900">
+      <header className="border-b bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-h2 font-bold text-indigo-800">Gestion des utilisateurs</h1>
-            <p className="text-body-small text-neutral-600">
+            <h1 className="text-h3 font-bold text-indigo-800 dark:text-indigo-300 sm:text-h2">Gestion des utilisateurs</h1>
+            <p className="text-body-small text-neutral-600 dark:text-neutral-300">
               Supprimez ou gerez les utilisateurs du systeme
             </p>
           </div>
-          <Link to="/admin/dashboard" className="flex items-center gap-2 text-sm text-indigo-600 underline hover:text-indigo-800">
+          <Link to="/admin/dashboard" className="flex items-center gap-2 text-sm text-indigo-600 underline hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200">
             <ChevronLeft size={16} /> Retour au dashboard
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl p-8">
+      <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
         {loading ? (
           <div className="py-12 text-center text-neutral-600">Chargement...</div>
         ) : (
@@ -110,10 +110,10 @@ export default function AdminManageUsersPage() {
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-xl bg-white shadow">
+            <div className="overflow-hidden rounded-xl bg-white shadow dark:bg-neutral-900">
               <div className="max-h-[70vh] overflow-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10 border-b bg-gray-100">
+                <table className="min-w-[980px] w-full text-left text-sm">
+                  <thead className="sticky top-0 z-10 border-b bg-gray-100 dark:border-neutral-700 dark:bg-neutral-800">
                     <tr>
                       <th className="px-6 py-3 text-left font-semibold text-neutral-700">Email</th>
                       <th className="px-6 py-3 text-left font-semibold text-neutral-700">Nom</th>
@@ -134,8 +134,8 @@ export default function AdminManageUsersPage() {
                     ) : (
                       users.map((u) => (
                         <tr key={u.id} className="transition-colors odd:bg-white even:bg-indigo-50/30 hover:bg-indigo-50/60">
-                          <td className="px-6 py-4 font-mono text-sm text-neutral-800">{u.email}</td>
-                          <td className="px-6 py-4 text-sm text-neutral-800">{u.firstName} {u.lastName}</td>
+                          <td className="px-6 py-4 font-mono text-sm text-neutral-800 dark:text-neutral-100">{u.email}</td>
+                          <td className="px-6 py-4 text-sm text-neutral-800 dark:text-neutral-100">{u.firstName} {u.lastName}</td>
                           <td className="px-6 py-4 text-sm">
                             <span className={`rounded px-2 py-1 text-xs font-semibold ${
                               u.role === 'ADMIN'
@@ -154,8 +154,8 @@ export default function AdminManageUsersPage() {
                               {u.isActive ? 'Actif' : 'Inactif'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-600">{formatDate(u.createdAt)}</td>
-                          <td className="px-6 py-4 text-sm text-neutral-600">{formatDate(u.lastLogin)}</td>
+                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">{formatDate(u.createdAt)}</td>
+                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">{formatDate(u.lastLogin)}</td>
                           <td className="px-6 py-4 text-center">
                             <button
                               onClick={() => handleDeleteClick(u)}
@@ -179,7 +179,7 @@ export default function AdminManageUsersPage() {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <Button
                   variant="secondary"
                   onClick={() => setPage(Math.max(0, page - 1))}
