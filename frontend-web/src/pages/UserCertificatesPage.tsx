@@ -107,7 +107,7 @@ export default function UserCertificatesPage() {
               <Info label="Organisation" value={cert.subjectDN.split(',')[1]?.replace('O=', '') || '-'} />
               <Info label="Date d'expiration" value={formatDate(cert.notAfter)} />
               <Info label="Algorithme" value="RSA 4096 bits" />
-              <Info label="Numero de serie" value={cert.serialNumber.match(/.{1,2}/g)?.join(':') || cert.serialNumber} mono />
+              <Info label="Numero de serie" value={cert.serialNumber.match(/.{1,2}/g)?.join(':') || cert.serialNumber} mono={true} />
             </div>
           )}
 
@@ -166,12 +166,15 @@ export default function UserCertificatesPage() {
                 </button>
                 <button
                   onClick={() => downloadCertificate('p12')}
-                  disabled={downloading !== null || !p12Password}
+                  disabled={downloading !== null || p12Password.length < 8}
                   className="rounded-md bg-primary-700 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   {downloading === 'p12' ? 'Telechargement...' : 'Telecharger .p12'}
                 </button>
               </div>
+              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                Minimum 8 caracteres pour le mot de passe du fichier .p12.
+              </p>
             </div>
             <div className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Le fichier .crt est compatible avec la plupart des navigateurs et applications.</div>
           </div>

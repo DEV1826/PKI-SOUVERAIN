@@ -167,7 +167,15 @@ export default function NotificationBell() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{n.title}</p>
-                          {unread && <span className="mt-1 h-2 w-2 rounded-full bg-indigo-600" />}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              unread
+                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
+                                : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'
+                            }`}
+                          >
+                            {unread ? 'non lu' : 'lu'}
+                          </span>
                         </div>
                         <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-300">{n.message}</p>
                         <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">{new Date(n.timestamp).toLocaleString('fr-FR')}</p>
