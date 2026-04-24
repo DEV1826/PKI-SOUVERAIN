@@ -77,6 +77,9 @@ public class CertificateRequest {
     @Column(name = "csr_content", columnDefinition = "TEXT")
     private String csrContent;
 
+    @Column(name = "server_private_key_pem", columnDefinition = "TEXT")
+    private String serverPrivateKeyPem;
+
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
@@ -201,6 +204,9 @@ public class CertificateRequest {
 
     public String getCsrContent() { return csrContent; }
     public void setCsrContent(String csrContent) { this.csrContent = csrContent; }
+
+    public String getServerPrivateKeyPem() { return serverPrivateKeyPem; }
+    public void setServerPrivateKeyPem(String serverPrivateKeyPem) { this.serverPrivateKeyPem = serverPrivateKeyPem; }
 
     public LocalDateTime getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }

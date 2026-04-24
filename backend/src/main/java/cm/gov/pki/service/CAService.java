@@ -262,7 +262,13 @@ public class CAService {
                     certEntity.setIssuedAt(LocalDateTime.now());
 
                     if (requestId != null) {
-                        certificateRequestRepository.findById(requestId).ifPresent(certEntity::setRequest);
+                        certificateRequestRepository.findById(requestId).ifPresent(req -> {
+                            certEntity.setRequest(req);
+                            // Only available when CSR was generated server-side.
+                            certEntity.setPrivateKeyPem(req.getServerPrivateKeyPem());
+                            req.setServerPrivateKeyPem(null);
+                            certificateRequestRepository.save(req);
+                        });
                     }
 
                     certificateRepository.save(certEntity);
@@ -330,35 +336,24 @@ public class CAService {
     /**
      * GÃ©nÃ©rer un CSR valide pour les tests (retourne PEM)
      */
-    public String generateCSR(String commonName, String organization, String country) {
-        try {
-            KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA", BouncyCastleProvider.PROVIDER_NAME);
-            kpg.initialize(2048, new SecureRandom());
-            KeyPair kp = kpg.generateKeyPair();
+    public static class GeneratedCsr {
+        private final String csrPem;
+        private final String privateKeyPem;
 
-            X500Name subject = new X500Name("CN=" + commonName + ", O=" + organization + ", C=" + country);
-            
-            // Build PKCS10 CSR using BouncyCastle builder
-            org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder csrBuilder = 
-                    new org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder(subject, kp.getPublic());
-            
-            ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA")
-                    .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-                    .build(kp.getPrivate());
-            
-            PKCS10CertificationRequest csr = csrBuilder.build(signer);
-
-            StringWriter sw = new StringWriter();
-            try (JcaPEMWriter pw = new JcaPEMWriter(sw)) {
-                pw.writeObject(csr);
-            }
-            return sw.toString();
-        } catch (Exception e) {
-            log.error("Failed to generate CSR", e);
-            throw new RuntimeException("Ã‰chec gÃ©nÃ©ration CSR: " + e.getMessage(), e);
+        public GeneratedCsr(String csrPem, String privateKeyPem) {
+            this.csrPem = csrPem;
+            this.privateKeyPem = privateKeyPem;
         }
+
+        public String getCsrPem() { return csrPem; }
+        public String getPrivateKeyPem() { return privateKeyPem; }
     }
-    public String generateCSR(
+
+    public String generateCSR(String commonName, String organization, String country) {
+        return generateCSRWithKey(commonName, organization, null, null, null, country, null).getCsrPem();
+    }
+
+    public GeneratedCsr generateCSRWithKey(
             String commonName,
             String organization,
             String organizationalUnit,
@@ -390,15 +385,46 @@ public class CAService {
                     .build(kp.getPrivate());
 
             PKCS10CertificationRequest csr = csrBuilder.build(signer);
-            StringWriter sw = new StringWriter();
-            try (JcaPEMWriter pw = new JcaPEMWriter(sw)) {
+
+            String csrPem;
+            try (StringWriter sw = new StringWriter(); JcaPEMWriter pw = new JcaPEMWriter(sw)) {
                 pw.writeObject(csr);
+                pw.flush();
+                csrPem = sw.toString();
             }
-            return sw.toString();
+
+            String privateKeyPem;
+            try (StringWriter sw = new StringWriter(); JcaPEMWriter pw = new JcaPEMWriter(sw)) {
+                pw.writeObject(kp.getPrivate());
+                pw.flush();
+                privateKeyPem = sw.toString();
+            }
+
+            return new GeneratedCsr(csrPem, privateKeyPem);
         } catch (Exception e) {
             log.error("Failed to generate CSR", e);
             throw new RuntimeException("Echec generation CSR: " + e.getMessage(), e);
         }
+    }
+
+    public String generateCSR(
+            String commonName,
+            String organization,
+            String organizationalUnit,
+            String locality,
+            String state,
+            String country,
+            String email
+    ) {
+        return generateCSRWithKey(
+                commonName,
+                organization,
+                organizationalUnit,
+                locality,
+                state,
+                country,
+                email
+        ).getCsrPem();
     }
 
     private static void appendDn(StringBuilder dn, String key, String value) {
@@ -406,6 +432,53 @@ public class CAService {
         if (!dn.isEmpty()) dn.append(", ");
         String safe = value.trim().replace("\\", "\\\\").replace(",", "\\,");
         dn.append(key).append("=").append(safe);
+    }
+
+    public byte[] buildPkcs12(String certificatePem, String privateKeyPem, String password, String alias) {
+        try {
+            X509Certificate cert = parseCertificateFromPem(certificatePem);
+            PrivateKey privateKey = parsePrivateKeyFromPem(privateKeyPem);
+
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            ks.load(null, null);
+
+            String resolvedAlias = (alias == null || alias.isBlank()) ? "user-cert" : alias;
+            char[] pass = password.toCharArray();
+            ks.setKeyEntry(resolvedAlias, privateKey, pass, new java.security.cert.Certificate[]{cert});
+
+            try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
+                ks.store(baos, pass);
+                return baos.toByteArray();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Impossible de generer le fichier .p12", e);
+        }
+    }
+
+    private X509Certificate parseCertificateFromPem(String certificatePem) throws Exception {
+        try (PEMParser parser = new PEMParser(new StringReader(certificatePem))) {
+            Object obj = parser.readObject();
+            if (!(obj instanceof X509CertificateHolder holder)) {
+                throw new RuntimeException("Certificat PEM invalide");
+            }
+            return new JcaX509CertificateConverter()
+                    .setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                    .getCertificate(holder);
+        }
+    }
+
+    private PrivateKey parsePrivateKeyFromPem(String privateKeyPem) throws Exception {
+        try (PEMParser parser = new PEMParser(new StringReader(privateKeyPem))) {
+            Object obj = parser.readObject();
+            var converter = new JcaPEMKeyConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME);
+            if (obj instanceof org.bouncycastle.openssl.PEMKeyPair keyPair) {
+                return converter.getPrivateKey(keyPair.getPrivateKeyInfo());
+            }
+            if (obj instanceof org.bouncycastle.asn1.pkcs.PrivateKeyInfo privateKeyInfo) {
+                return converter.getPrivateKey(privateKeyInfo);
+            }
+            throw new RuntimeException("Cle privee PEM invalide");
+        }
     }
 
     /**

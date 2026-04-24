@@ -316,6 +316,7 @@ public class UserController {
         if (csrContent == null || csrContent.isBlank()) {
             return ResponseEntity.status(400).body(Map.of("error", "Un CSR est requis (texte ou fichier)"));
         }
+        req.setServerPrivateKeyPem(null);
 
         return finalizeCsrSubmission(req, csrContent);
     }
@@ -365,7 +366,7 @@ public class UserController {
         String resolvedState = (state == null || state.isBlank()) ? req.getState() : state.trim();
         String resolvedEmail = (email == null || email.isBlank()) ? req.getEmail() : email.trim();
 
-        String generatedCsr = caService.generateCSR(
+        CAService.GeneratedCsr generated = caService.generateCSRWithKey(
                 resolvedCn,
                 resolvedOrg,
                 resolvedOu,
@@ -374,7 +375,8 @@ public class UserController {
                 resolvedCountry,
                 resolvedEmail
         );
-        return finalizeCsrSubmission(req, generatedCsr);
+        req.setServerPrivateKeyPem(generated.getPrivateKeyPem());
+        return finalizeCsrSubmission(req, generated.getCsrPem());
     }
 
     private ResponseEntity<?> finalizeCsrSubmission(CertificateRequest req, String csrContent) {
@@ -489,7 +491,8 @@ public class UserController {
     public ResponseEntity<?> downloadCertificate(
             Authentication authentication,
             @PathVariable("certificateId") UUID certificateId,
-            @RequestParam(value = "format", defaultValue = "pem") String format) {
+            @RequestParam(value = "format", defaultValue = "pem") String format,
+            @RequestParam(value = "password", required = false) String password) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User)) {
             return ResponseEntity.status(401).build();
         }
@@ -501,25 +504,38 @@ public class UserController {
             return ResponseEntity.status(403).body(Map.of("error", "Unauthorized"));
         }
 
-        String content = certificate.getCertificatePem();
         String fileName;
         String contentType;
+        byte[] contentBytes;
         if ("pem".equalsIgnoreCase(format)) {
             fileName = "certificate-" + certificateId + ".pem";
             contentType = "application/x-pem-file";
+            contentBytes = certificate.getCertificatePem().getBytes(StandardCharsets.UTF_8);
         } else if ("crt".equalsIgnoreCase(format)) {
             fileName = "certificate-" + certificateId + ".crt";
             contentType = "application/x-x509-ca-cert";
+            contentBytes = certificate.getCertificatePem().getBytes(StandardCharsets.UTF_8);
         } else if ("p12".equalsIgnoreCase(format) || "pfx".equalsIgnoreCase(format)) {
-            return ResponseEntity.status(400).body(Map.of(
-                    "error",
-                    "Export .p12/.pfx indisponible: la cle privee utilisateur n'est pas stockee cote serveur pour ce certificat. Utilisez .crt ou .pem."
-            ));
+            if (password == null || password.length() < 8) {
+                return ResponseEntity.status(400).body(Map.of("error", "Mot de passe .p12 requis (minimum 8 caracteres)."));
+            }
+            if (certificate.getPrivateKeyPem() == null || certificate.getPrivateKeyPem().isBlank()) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "error",
+                        "Export .p12/.pfx indisponible pour ce certificat. Utilisez .crt ou .pem."
+                ));
+            }
+            fileName = "certificate-" + certificateId + ".p12";
+            contentType = "application/x-pkcs12";
+            contentBytes = caService.buildPkcs12(
+                    certificate.getCertificatePem(),
+                    certificate.getPrivateKeyPem(),
+                    password,
+                    "cert-" + certificate.getId()
+            );
         } else {
             return ResponseEntity.status(400).body(Map.of("error", "Format invalide. Utilisez pem, crt ou p12."));
         }
-
-        byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_TYPE, contentType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")

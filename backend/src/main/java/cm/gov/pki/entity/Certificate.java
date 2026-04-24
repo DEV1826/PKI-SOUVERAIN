@@ -49,6 +49,9 @@ public class Certificate {
     @Column(name = "public_key_pem", columnDefinition = "TEXT")
     private String publicKeyPem;
 
+    @Column(name = "private_key_pem", columnDefinition = "TEXT")
+    private String privateKeyPem;
+
     // Métadonnées X.509
     @Column(name = "subject_dn", nullable = false, length = 500)
     private String subjectDN;
@@ -195,6 +198,9 @@ public class Certificate {
 
     public String getPublicKeyPem() { return publicKeyPem; }
     public void setPublicKeyPem(String publicKeyPem) { this.publicKeyPem = publicKeyPem; }
+
+    public String getPrivateKeyPem() { return privateKeyPem; }
+    public void setPrivateKeyPem(String privateKeyPem) { this.privateKeyPem = privateKeyPem; }
 
     public String getSubjectDN() { return subjectDN; }
     public void setSubjectDN(String subjectDN) { this.subjectDN = subjectDN; }
