@@ -5,7 +5,9 @@ export default function UserCertificatesPage() {
   const [cert, setCert] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState<'pem' | 'crt' | null>(null);
+  const [downloading, setDownloading] = useState<'pem' | 'crt' | 'p12' | null>(null);
+  const [p12Password, setP12Password] = useState('');
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   useEffect(() => {
     userService
@@ -21,11 +23,40 @@ export default function UserCertificatesPage() {
     return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  async function downloadCertificate(format: 'pem' | 'crt') {
+  function generateStrongPassword(length = 16) {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    let out = '';
+    const random = window.crypto.getRandomValues(new Uint32Array(length));
+    for (let i = 0; i < length; i++) out += alphabet[random[i] % alphabet.length];
+    return out;
+  }
+
+  async function copyPassword() {
+    if (!p12Password) return;
+    await navigator.clipboard.writeText(p12Password);
+    setPasswordCopied(true);
+    setTimeout(() => setPasswordCopied(false), 1800);
+  }
+
+  async function extractDownloadError(err: any) {
+    const data = err?.response?.data;
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text();
+        const parsed = JSON.parse(text);
+        return parsed?.error || parsed?.message || text;
+      } catch {
+        return 'Erreur lors du telechargement du certificat.';
+      }
+    }
+    return data?.error || data?.message || 'Erreur lors du telechargement du certificat.';
+  }
+
+  async function downloadCertificate(format: 'pem' | 'crt' | 'p12') {
     if (!cert?.id) return;
     try {
       setDownloading(format);
-      const blob = await userService.downloadCertificate(cert.id, format);
+      const blob = await userService.downloadCertificate(cert.id, format, format === 'p12' ? p12Password : undefined);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -34,8 +65,8 @@ export default function UserCertificatesPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch {
-      setError('Erreur lors du telechargement du certificat.');
+    } catch (e: any) {
+      setError(await extractDownloadError(e));
     } finally {
       setDownloading(null);
     }
@@ -107,6 +138,41 @@ export default function UserCertificatesPage() {
             >
               {downloading === 'pem' ? 'Telechargement...' : 'Certificat (.pem)'}
             </button>
+            <div className="mt-4 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
+              <div className="mb-2 text-sm font-semibold text-neutral-800 dark:text-neutral-100">Export PKCS#12 (.p12) protege</div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={p12Password}
+                  onChange={(e) => setP12Password(e.target.value)}
+                  placeholder="Mot de passe du .p12"
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => setP12Password(generateStrongPassword())}
+                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 dark:border-neutral-700 dark:text-neutral-200"
+                >
+                  Generer
+                </button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={copyPassword}
+                  disabled={!p12Password}
+                  className="rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-200"
+                >
+                  {passwordCopied ? 'Copie' : 'Copier mot de passe'}
+                </button>
+                <button
+                  onClick={() => downloadCertificate('p12')}
+                  disabled={downloading !== null || !p12Password}
+                  className="rounded-md bg-primary-700 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {downloading === 'p12' ? 'Telechargement...' : 'Telecharger .p12'}
+                </button>
+              </div>
+            </div>
             <div className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Le fichier .crt est compatible avec la plupart des navigateurs et applications.</div>
           </div>
 

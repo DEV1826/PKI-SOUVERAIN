@@ -248,9 +248,13 @@ export const userService = {
   /**
    * TÃ©lÃ©charger un certificat par ID
    */
-  downloadCertificate: async (certificateId: string, format: 'pem' | 'crt' = 'pem'): Promise<Blob> => {
+  downloadCertificate: async (
+    certificateId: string,
+    format: 'pem' | 'crt' | 'p12' = 'pem',
+    password?: string
+  ): Promise<Blob> => {
     const response = await apiClient.get(`/user/certificates/${certificateId}/download`, {
-      params: { format },
+      params: { format, password },
       responseType: 'blob'
     });
     return response.data as Blob;
