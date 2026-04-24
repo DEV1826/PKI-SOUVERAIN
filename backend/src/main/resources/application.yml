@@ -6,6 +6,8 @@
 spring:
   application:
     name: pki-souverain-backend
+  main:
+    lazy-initialization: ${SPRING_MAIN_LAZY_INITIALIZATION:true}
 
   servlet:
     multipart:
