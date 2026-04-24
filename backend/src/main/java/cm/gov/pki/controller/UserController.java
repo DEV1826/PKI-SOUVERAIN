@@ -510,8 +510,13 @@ public class UserController {
         } else if ("crt".equalsIgnoreCase(format)) {
             fileName = "certificate-" + certificateId + ".crt";
             contentType = "application/x-x509-ca-cert";
+        } else if ("p12".equalsIgnoreCase(format) || "pfx".equalsIgnoreCase(format)) {
+            return ResponseEntity.status(400).body(Map.of(
+                    "error",
+                    "Export .p12/.pfx indisponible: la cle privee utilisateur n'est pas stockee cote serveur pour ce certificat. Utilisez .crt ou .pem."
+            ));
         } else {
-            return ResponseEntity.status(400).body(Map.of("error", "Invalid format"));
+            return ResponseEntity.status(400).body(Map.of("error", "Format invalide. Utilisez pem, crt ou p12."));
         }
 
         byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
