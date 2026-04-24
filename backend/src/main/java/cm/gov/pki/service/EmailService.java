@@ -32,6 +32,15 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
+    private String buildFrontendHashLink(String routeWithQuery) {
+        String base = frontendUrl == null ? "" : frontendUrl.trim();
+        if (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        String route = routeWithQuery.startsWith("/") ? routeWithQuery : "/" + routeWithQuery;
+        return base + "/#" + route;
+    }
+
     /**
      * Envoie ou affiche un email en mode debug
      */
@@ -79,11 +88,8 @@ public class EmailService {
             message.setTo(toEmail);
             message.setSubject("Votre certificat numÃ©rique - Jeton de validation");
             
-            String validationLink = String.format(
-                "%s/validate-token?requestId=%s&token=%s",
-                frontendUrl,
-                requestId,
-                validationToken
+            String validationLink = buildFrontendHashLink(
+                String.format("/validate-token?requestId=%s&token=%s", requestId, validationToken)
             );
             
             String messageBody = String.format(
@@ -165,10 +171,8 @@ public class EmailService {
             message.setTo(toEmail);
             message.setSubject("RÃ©initialisation de votre mot de passe");
             
-            String resetLink = String.format(
-                "%s/reset-password?token=%s",
-                frontendUrl,
-                resetToken
+            String resetLink = buildFrontendHashLink(
+                String.format("/reset-password?token=%s", resetToken)
             );
             
             String messageBody = String.format(
