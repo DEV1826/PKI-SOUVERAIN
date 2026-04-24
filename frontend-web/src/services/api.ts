@@ -40,7 +40,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       if (!window.location.hash.includes('/login')) {
-        window.location.href = '/login';
+        window.location.hash = '/login';
       }
     }
     return Promise.reject(error);
@@ -157,7 +157,7 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    window.location.href = '/login';
+    window.location.hash = '/login';
   },
 
   /**
